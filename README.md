@@ -8,7 +8,7 @@ TabBuster automatically closes annoying pages you've decided should stop appeari
 Add a page or an entire hostname to your list, and let it handle the repeat appearances.
 
 Some overly helpful browser extension and software developers love to take liberties and load pages in your browser without your permission; update prompts, licensing reminders, pointless nags, etc., all become annoying.
-One was particularly useful video site enhancements extension was very inspirational in the creation of this simple, but effective extension. I never wanted to see that page again.
+One particularly useful video site enhancements extension, with a completely nagging and pointless page that intermittently pops up unbidden, was very inspirational in the creation of this simple, but effective extension. I decided I never wanted to see that page again.
 
 ## Quick & Easy
 
