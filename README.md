@@ -15,7 +15,7 @@ Some helpful browser companions are remarkably persistent about reminding you to
 
 To update, replace the files in the same folder and click **Reload** on the extension's card.
 
-## Make yourself comfortable
+## Quick & Easy
 
 - **Add this tab/site** saves the current page. Use the arrow to cover its whole hostname, or enter a URL in **Options**.
 - **Close current tab** dismisses it immediately when adding. **Pause automatic closing** gives you a break without losing your list.
