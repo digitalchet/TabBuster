@@ -1,4 +1,4 @@
-# Publish only the extension, user guide, and portable regression tests.
+# Publish only the extension, user guide, selected screenshot, and portable regression tests.
 /*
 !/.gitignore
 !/README.md
@@ -7,6 +7,11 @@
 !/tests/
 /tests/*
 !/tests/check-extension.cjs
+!/assets/
+/assets/*
+!/assets/screenshots/
+/assets/screenshots/*
+!/assets/screenshots/TabBusterPopUp.jpg
 
 # Keep generated files and local configuration out of source control.
 node_modules/

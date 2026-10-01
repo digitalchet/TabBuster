@@ -1,3 +1,5 @@
+<img src="TabBuster/assets/icon-128.png" alt="TabBuster icon" width="80" height="80" align="right">
+
 # TabBuster
 
 **Your browser. Your tabs. Your call.**
@@ -23,6 +25,8 @@ To update, replace the files in the same folder and click **Reload** on the exte
 - Enable **In-browser notifications** in Settings and approve website access for brief page notices. Windows notifications remain available without that access and on protected pages.
 
 Page rules ignore query strings and fragments. Subdomains, including `www`, need separate entries. The **? Help** button in Settings explains the details.
+
+<img src="assets/screenshots/TabBusterPopUp.jpg" alt="TabBuster popup showing quick actions, pause control, and closure counts" width="380">
 
 ## Good to know
 
