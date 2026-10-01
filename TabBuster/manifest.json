@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "TabBuster",
+  "version": "1.3.5",
+  "description": "Closes pages and hostnames on your personal list.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "notifications"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "TabBuster"
+  },
+  "options_page": "settings.html",
+  "icons": {
+    "128": "assets/icon-128.png"
+  },
+  "optional_permissions": [
+    "scripting"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}

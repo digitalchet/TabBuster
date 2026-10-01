@@ -1,0 +1,12 @@
+{
+  "name": "tabbuster",
+  "version": "1.3.5",
+  "private": true,
+  "description": "Close unwanted browser tabs on your terms.",
+  "scripts": {
+    "test": "node tests/check-extension.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

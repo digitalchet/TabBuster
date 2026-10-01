@@ -1,0 +1,87 @@
+@font-face {
+  font-family: "Noto Sans";
+  src: url("assets/fonts/NotoSans-Latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+* { box-sizing: border-box; }
+:root { font-family: "Noto Sans", system-ui, sans-serif; background: var(--surface-page); color: var(--text-main); }
+body { margin: 0; min-width: 390px; }
+main { max-width: 720px; margin: auto; padding: 26px; }
+header { padding-bottom: 18px; border-bottom: 1px solid var(--border-soft); }
+h1 { font-size: 26px; font-weight: 700; letter-spacing: -.7px; margin: 7px 0; }
+h2 { font-size: 17px; margin: 24px 0 12px; }
+p { line-height: 1.55; }
+.eyebrow { font-size: 10px; letter-spacing: 1.8px; color: var(--charbar-blue); font-weight: 700; }
+header p { color: var(--text-muted); font-size: 13px; margin-bottom: 0; }
+.toggle { display: flex; gap: 10px; align-items: center; padding: 18px 0; font-weight: 500; font-size: 13px; cursor: pointer; }
+input[type=checkbox] { accent-color: var(--charbar-blue); width: 18px; height: 18px; flex-shrink: 0; margin: 0; }
+form { background: var(--surface-card); border: 1px solid var(--border-soft); border-radius: 12px; padding: 18px; box-shadow: 0 6px 20px var(--shadow-soft); }
+form label { display: block; color: var(--text-control); font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+input[type=text], select { width: 100%; min-height: 42px; padding: 10px; border: 1px solid var(--border-control); border-radius: 6px; background: var(--surface-input); color: var(--text-main); font: inherit; font-size: 13px; margin-bottom: 16px; }
+input::placeholder { color: var(--btn-icon-muted); opacity: 1; }
+input:hover, select:hover { border-color: var(--border-visible); }
+option { background: var(--surface-input); color: var(--text-main); }
+.hint, footer { font-size: 12px; line-height: 1.65; color: var(--text-muted); }
+.hint { margin: 0 0 16px; }
+button { border: 1px solid transparent; border-radius: 6px; background: var(--charbar-blue); color: var(--accent-contrast); font: inherit; font-size: 13px; font-weight: 700; padding: 10px 14px; cursor: pointer; transition: background var(--control-motion-duration) var(--control-motion-easing), border-color var(--control-motion-duration) var(--control-motion-easing); }
+button:hover { background: color-mix(in srgb, var(--charbar-blue) 85%, var(--text-main)); }
+button:active { background: color-mix(in srgb, var(--charbar-blue) 85%, var(--surface-page)); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--charbar-blue); outline-offset: 3px; }
+#status { font-size: 12px; min-height: 18px; color: var(--text-control); overflow-wrap: anywhere; }
+ul { list-style: none; padding: 0; display: grid; gap: 8px; }
+li { display: flex; gap: 12px; align-items: center; padding: 13px; border: 1px solid var(--border-soft); border-radius: 8px; background: var(--saved-card-bg); font-size: 12px; }
+li:hover { background: var(--saved-card-hover); }
+li span { flex: 1; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+li small { display: block; color: var(--text-muted); margin-bottom: 5px; }
+li button { flex-shrink: 0; background: var(--btn-background); color: var(--btn-text); border-color: var(--btn-border); font-size: 11px; padding: 8px 10px; }
+li button:hover { background: var(--danger-fill); border-color: var(--danger-red); color: var(--danger-red); }
+footer { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-soft); }
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+@media (min-width: 700px) { main { padding-top: 48px; padding-bottom: 48px; } }
+@media (prefers-reduced-motion: reduce) { button { transition: none; } }
+.brand{display:flex;align-items:center;gap:12px;margin:12px 0 8px}.brand img{display:block;border-radius:9px;flex-shrink:0}.brand h1{margin:0}
+/* Digital*Impulse footer, matching ReFlag with Midnight theme tokens. */
+.usage-note{margin-top:24px;padding-top:18px;border-top:1px solid var(--border-soft);font-size:12px;line-height:1.65;color:var(--text-muted)}
+.brand-footer{text-align:center;margin-top:30px;padding-top:18px}
+.brand-footer a{color:var(--text-muted);text-decoration:none;text-underline-offset:3px}
+.brand-footer a:hover{text-decoration:underline}
+.brand-footer a:focus-visible{outline:2px solid var(--charbar-blue);outline-offset:4px}
+.support{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;color:var(--text-muted)}
+.brand-footer .kofi-button{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:8px;background:var(--charbar-blue);color:var(--accent-contrast);box-shadow:0 3px 9px var(--shadow-soft);font-weight:700;transition:transform 140ms ease,box-shadow 140ms ease;animation:kofi-nudge 4.5s ease-in-out infinite}
+.brand-footer .kofi-button:hover{color:var(--accent-contrast);text-decoration:none;transform:translateY(-1px);box-shadow:0 5px 13px var(--shadow-soft)}
+@keyframes kofi-nudge{0%,82%,100%{transform:rotate(0)}86%{transform:rotate(-2deg)}90%{transform:rotate(2deg)}94%{transform:rotate(0)}}
+@media(prefers-reduced-motion:reduce){.brand-footer .kofi-button{animation:none;transition:none}}
+/* Shared ReFlag switch geometry, with Midnight colour tokens. */
+.toggle{justify-content:space-between;gap:20px;cursor:default}
+.toggle>span{flex:1}
+.switch{position:relative;flex:0 0 48px;width:48px;height:26px;min-height:26px;padding:0;border:0;border-radius:999px;background:var(--border-control);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);transition:background 150ms ease;cursor:pointer}
+.switch>span{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--text-main);box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform 150ms ease}
+.switch[aria-checked="true"],.switch[aria-checked="true"]:hover{background:var(--charbar-blue)}
+.switch[aria-checked="true"]>span{transform:translateX(22px)}
+.switch:hover{background:var(--border-visible)}
+.switch:focus-visible{outline:3px solid var(--charbar-blue);outline-offset:3px}
+.switch:disabled{opacity:.5;cursor:wait}
+.notification-access{padding:0 16px 12px;margin:0 0 12px;border:1px solid var(--border-soft);border-radius:10px;background:var(--surface-card)}
+#permission-status{color:var(--text-control);margin-bottom:0}
+@media(prefers-reduced-motion:reduce){.switch,.switch>span{transition:none}}
+/* Shared ReFlag/Lexicopia help pattern: circular trigger and right drawer. */
+.settings-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#help-button{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:0;border:1px solid var(--border-control);border-radius:50%;background:var(--surface-card);color:var(--text-main);font-size:18px;font-weight:700;line-height:1}
+#help-button:hover,#help-close:hover{background:var(--surface-subtle-hover)}
+#help-panel{position:fixed;inset:0 0 0 auto;margin:0;width:min(410px,100vw);max-width:100vw;height:100dvh;max-height:100dvh;padding:0;border:0;border-left:1px solid var(--border-soft);background:var(--surface-page);color:var(--text-main);box-shadow:-10px 0 30px #0006;overflow:auto}
+#help-panel[open]{animation:help-reveal 180ms ease-out}
+#help-panel::backdrop{background:#0006}
+.help-heading{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px;background:var(--surface-page);border-bottom:1px solid var(--border-soft);z-index:1}
+.help-heading .eyebrow{margin:0 0 5px;font-size:10px}
+.help-heading h2{font-size:22px;margin:0;line-height:1.3}
+#help-close{display:grid;place-items:center;margin:0;padding:0;width:34px;height:34px;flex:none;background:var(--surface-card);color:var(--text-main);border:1px solid var(--border-control);font-size:24px;line-height:1}
+.help-content{padding:0 20px 24px;font-size:13px;line-height:1.65}
+.help-content details{border-bottom:1px solid var(--border-soft);padding:14px 0}
+.help-content summary{font-size:14px;font-weight:700;cursor:pointer}
+.help-content summary:focus-visible{outline:2px solid var(--charbar-blue);outline-offset:4px}
+.help-content p{margin:10px 0;color:var(--text-muted)}
+.help-content strong{color:var(--text-control)}
+@keyframes help-reveal{from{transform:translateX(100%);opacity:.5}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){#help-panel[open]{animation:none}}

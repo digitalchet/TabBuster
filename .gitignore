@@ -1,0 +1,17 @@
+# Publish only the extension, user guide, and portable regression tests.
+/*
+!/.gitignore
+!/README.md
+!/package.json
+!/TabBuster/
+!/tests/
+/tests/*
+!/tests/check-extension.cjs
+
+# Keep generated files and local configuration out of source control.
+node_modules/
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db

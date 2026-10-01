@@ -1,0 +1,53 @@
+/* Shared Midnight palette from Xtylize. Keep these values aligned with its theme. */
+:root {
+  color-scheme: dark;
+  --surface-page: #07111f;
+  --surface-card: #0f1e31;
+  --surface-muted: #13263b;
+  --surface-subtle: #102236;
+  --surface-subtle-hover: #18304a;
+  --surface-input: #0b1829;
+  --text-main: #f4f8ff;
+  --text-muted: #b7c7dc;
+  --text-control: #d8e6f5;
+  --border-soft: #243b57;
+  --border-control: #38536f;
+  --border-visible: #45627f;
+  --btn-border: #38536f;
+  --btn-text: #d8e6f5;
+  --btn-icon: #d8e6f5;
+  --btn-icon-muted: #9fb3ca;
+  --btn-background: rgba(117, 177, 226, 0.14);
+  --charbar-blue: #69b7ff;
+  --accent-contrast: #07111f;
+  --status-green: #7cdf91;
+  --danger-red: #ff7180;
+  --danger-contrast: #07111f;
+  --danger-fill: color-mix(in srgb, var(--danger-red) 24%, transparent);
+  --edit-green: #55c878;
+  --edit-green-rgb: 85, 200, 120;
+  --archive-accent: #d2b66a;
+  --archive-accent-rgb: 210, 182, 106;
+  --saved-card-bg: #102236;
+  --saved-card-hover: #172d45;
+  --saved-header-bg: #14283f;
+  --saved-header-hover: #173451;
+  --saved-edit-bg: #18304a;
+  --saved-edit-hover: #1d3855;
+  --saved-edit-header-bg: #203c5a;
+  --saved-edit-header-hover: #284767;
+  --saved-archive-bg: color-mix(in srgb, var(--archive-accent) 15%, #102236);
+  --saved-archive-hover: color-mix(in srgb, var(--archive-accent) 20%, #172d45);
+  --saved-archive-header-bg: color-mix(in srgb, var(--archive-accent) 30%, #14283f);
+  --scrollbar-thumb: rgba(186, 214, 240, 0.38);
+  --scrollbar-thumb-hover: rgba(186, 214, 240, 0.58);
+  --shadow-soft: rgba(0, 0, 0, 0.22);
+  --loader-logo: #92a1b3;
+  --loader-logo-glow: rgba(105, 183, 255, 0.26);
+  --loader-logo-shadow: rgba(0, 0, 0, 0.52);
+  background: var(--surface-page);
+  color: var(--text-main);
+
+  --control-motion-duration: 160ms;
+  --control-motion-easing: ease-out;
+}
