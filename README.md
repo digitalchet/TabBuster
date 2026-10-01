@@ -4,11 +4,24 @@
 
 **Your browser. Your tabs. Your call.**
 
-TabBuster automatically closes pages you have decided should stop appearing. Add a page or an entire hostname to your list, and let it handle the repeat appearances.
+TabBuster automatically closes annoying pages you've decided should stop appearing; permanently.
+Add a page or an entire hostname to your list, and let it handle the repeat appearances.
 
-Some helpful browser companions are remarkably persistent about reminding you to update an already updated browser. One was particularly inspirational. Names withheld; tabs dismissed.
+Some overly helpful browser extension and software developers love to take liberties and load pages in your browser without your permission; update prompts, licensing reminders, pointless nags, etc., all become annoying.
+One was particularly useful video site enhancements extension was very inspirational in the creation of this simple, but effective extension. I never wanted to see that page again.
 
-## Get started
+## Quick & Easy
+
+- On the offending page, click the **TabBuster** icon, & **Add this tab/site** will add the current page for future actioning. Enabling **Close current tab** will add & close the tab.
+- Set it to affect only that specific page, or the entire hostname
+- **Pause automatic closing** anytime if you ever need to access the offending page.
+- Review total and session closure counts, recent closures.
+- Helpful toast tips inform you when a page has been busted. Enable the **In-browser notifications** in Settings and approve website access for brief page notices. System notifications remain available without that access and on protected pages.
+- A detailed history of each busted tab is kept in the Settings.
+
+<img src="assets/screenshots/TabBusterPopUp.jpg" alt="TabBuster popup showing quick actions, pause control, and closure counts" width="380">
+
+## Installation
 
 1. Choose **Code → Download ZIP** on GitHub, extract it, and keep the files in a permanent folder.
 2. Open `chrome://extensions` in Chrome or `opera://extensions` in Opera/GX.
@@ -17,25 +30,18 @@ Some helpful browser companions are remarkably persistent about reminding you to
 
 To update, replace the files in the same folder and click **Reload** on the extension's card.
 
-## Quick & Easy
+## Good to know
 
-- **Add this tab/site** saves the current page. Use the arrow to cover its whole hostname, or enter a URL in **Options**.
-- **Close current tab** dismisses it immediately when adding. **Pause automatic closing** gives you a break without losing your list.
-- See total and session closure counts, recent closures, and optional milestone celebrations.
-- Enable **In-browser notifications** in Settings and approve website access for brief page notices. Windows notifications remain available without that access and on protected pages.
+
+Chrome will need your permission for TabBuster to display in-browser notifications. This simply allows TabBuster to display the toast notification on whichever page you’re viewing. Nothing more.
+Chrome’s protected pages—such as Settings and the Chrome Web Store—are exempted, so TabBuster will resort to using a system notification instead.
+
+Matching pages will close even when you open them deliberately; pause before revisiting if you need to access them.
+You may occasionally see a momentary flash when a tab appears & closes, but this is exceedingly rare.
+TabBuster only ever closes tabs you add, it never affects other tabs, & offers no other security features.
 
 Page rules ignore query strings and fragments. Subdomains, including `www`, need separate entries. The **? Help** button in Settings explains the details.
 
-<img src="assets/screenshots/TabBusterPopUp.jpg" alt="TabBuster popup showing quick actions, pause control, and closure counts" width="380">
-
-## Good to know
-
-Matching pages close even when opened deliberately; pause before revisiting one. A tab may briefly appear or begin loading before it closes. TabBuster follows your list—it does not assess whether a site is safe.
-
 Rules, preferences, counts and recent closure history stay on your device. No analytics, remote code or background network requests. Removing the extension clears its saved data.
 
-## Development
-
-Run `npm test` with Node.js 18 or later. The tests use simulated browser APIs and require no dependencies; browser installation needs no build step.
-
-[A Digital*Impulse Creation.](https://digital-impulse.com/) · [Buy me a coffee](https://ko-fi.com/digitalchet)
+[A Digital☆Impulse Creation.](https://digital-impulse.com/) · [Buy me a coffee](https://ko-fi.com/digitalchet)
