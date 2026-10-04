@@ -36,7 +36,7 @@ chrome.storage.onChanged.addListener((changes,area)=>{
  closeCurrent.checked=closeOnAdd;
  [currentTab]=await chrome.tabs.query({active:true,currentWindow:true});
  const value=currentTab?.pendingUrl||currentTab?.url||"";
- if(!/^https?:\/\//i.test(value)){feedback.textContent="Open a website to add it, or enter a URL in Options.";return;}
+ if(!/^(https?:\/\/|data:)/i.test(value)){feedback.textContent="Open a website to add it, or enter a URL in Options.";return;}
  add.disabled=choose.disabled=closeCurrent.disabled=false;
 
 })().catch(()=>{feedback.textContent="Could not read this tab. Try reopening the menu.";});

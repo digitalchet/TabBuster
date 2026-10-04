@@ -47,3 +47,5 @@ Page rules ignore query strings and fragments. Subdomains, including `www`, need
 Rules, preferences, counts and recent closure history stay on your device. No analytics, remote code or background network requests. Removing the extension clears its saved data.
 
 [A Digital☆Impulse Creation.](https://digital-impulse.com/) · [Buy me a coffee](https://ko-fi.com/digitalchet)
+
+Embedded popups without an address bar can be added with the Add page shortcut. TabBuster saves a local SHA-256 fingerprint of the data address, not its contents. Only exact matches close; changed content or encoding needs adding again.

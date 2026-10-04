@@ -6,9 +6,10 @@ async function render(){
  if(!settings.rules.length){const empty=document.createElement("li");empty.textContent="Your list is empty. Add an address above.";list.append(empty);}
  for(const rule of settings.rules){
   const item=document.createElement("li"),label=document.createElement("span"),mode=document.createElement("small"),remove=document.createElement("button");
-  mode.textContent=rule.mode==="host"?"Every page on hostname":"One page";
-  label.append(mode,document.createTextNode(rule.host+rule.path));
-  remove.textContent="Remove";remove.setAttribute("aria-label","Remove "+rule.host+rule.path);
+  const name=rule.mode==="embedded"?"Embedded page · "+rule.fingerprint.slice(0,12):rule.host+rule.path;
+  mode.textContent=rule.mode==="embedded"?"Exact embedded page":rule.mode==="host"?"Every page on hostname":"One page";
+  label.append(mode,document.createTextNode(name));
+  remove.textContent="Remove";remove.setAttribute("aria-label","Remove "+name);
   remove.onclick=async()=>{try{
    const current=await chrome.storage.local.get(DEFAULT_SETTINGS);
    await chrome.storage.local.set({rules:current.rules.filter(r=>JSON.stringify(r)!==JSON.stringify(rule))});

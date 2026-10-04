@@ -43,7 +43,7 @@ function showClosureToast(site) {
 }
 
 async function notifyClosure(current,url) {
- const site=current.incognito?"Private tab":url.hostname;
+ const site=current.incognito?"Private tab":url.protocol==="data:"?"Embedded page":url.hostname;
  let reason="The page was not ready to display the notice.", attempts=0;
  try {
   const allowed=await chrome.permissions.contains({permissions:["scripting"],origins:["http://*/*","https://*/*"]});

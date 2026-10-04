@@ -16,11 +16,11 @@ async function closeIfUnwanted(tab, manual = false) {
  const value = current.pendingUrl || current.url;
  const {keptTabs={}} = await chrome.storage.session.get({keptTabs:{}});
  if (!manual && keptTabs[current.id]) {
-  if (keptTabs[current.id] === value) return;
+  if (keptTabs[current.id] === await tabIdentity(value)) return;
   delete keptTabs[current.id];
   await chrome.storage.session.set({keptTabs});
  }
- if (!settings.rules.some(rule => matchesRule(value, rule))) return;
+ if (!(await matchesTabRules(value,settings.rules))) return;
  try { await chrome.tabs.remove(tab.id); } catch { return; }
  const [local, session] = await Promise.all([
   chrome.storage.local.get({totalClosed:0, recentClosed:[]}),
@@ -28,7 +28,7 @@ async function closeIfUnwanted(tab, manual = false) {
  ]);
  const url = new URL(value);
  // Store no query strings, fragments, titles, credentials or private-window URLs.
- const entry = {url:current.incognito ? "Private tab" : url.origin + url.pathname, at:Date.now()};
+ const entry = {url:current.incognito ? "Private tab" : isEmbeddedPage(value) ? "Embedded page" : url.origin + url.pathname, at:Date.now()};
  const total=local.totalClosed+1;
  const milestone=settings.celebrate && isMilestone(total);
  await chrome.storage.local.set({totalClosed:total,recentClosed:[entry,...local.recentClosed].slice(0,50),...(milestone?{pendingMilestone:total}:{})});
@@ -94,14 +94,14 @@ chrome.storage.onChanged.addListener((changes,area)=>{
 void updateMilestoneBadge();
 async function addCurrentTab(tabId,mode,closeCurrent) {
   const tab=await chrome.tabs.get(tabId);
-  const rule=makeRule(tab.pendingUrl||tab.url,mode);
+  const rule=await makeTabRule(tab.pendingUrl||tab.url,mode);
   const settings=await chrome.storage.local.get({...DEFAULT_SETTINGS,closeOnAdd:true});
   const {keptTabs={}}=await chrome.storage.session.get({keptTabs:{}});
   const closeNow=typeof closeCurrent==="boolean"?closeCurrent:settings.closeOnAdd;
-  if(!closeNow) keptTabs[tab.id]=tab.pendingUrl||tab.url;
+  if(!closeNow) keptTabs[tab.id]=await tabIdentity(tab.pendingUrl||tab.url);
   else delete keptTabs[tab.id];
   await chrome.storage.session.set({keptTabs});
-  if(!settings.rules.some(r=>r.mode===rule.mode&&r.host===rule.host&&r.path===rule.path))
+  if(!settings.rules.some(r=>sameRule(r,rule)))
    await chrome.storage.local.set({rules:[...settings.rules,rule]});
   const closed=closeNow?Boolean(await closeIfUnwanted(tab,true)):false;
   return {ok:true,closed,paused:!settings.enabled,kept:!closeNow};
@@ -119,9 +119,10 @@ chrome.commands.onCommand.addListener((command,tab)=>{
    const candidate=await selected;
    if(!candidate){await report("Shortcut received, but no active tab was available.");return;}
    const current=await chrome.tabs.get(candidate.id);
-   if(!/^https?:\/\//i.test(current.pendingUrl||current.url||"")){
-    await report("Shortcut received, but this page is not an HTTP or HTTPS website.");return;
+   if(!/^(https?:\/\/|data:)/i.test(current.pendingUrl||current.url||"")){
+    await report("Shortcut received, but this page is not an HTTP, HTTPS or embedded data page.");return;
    }
+   if(isEmbeddedPage(current.pendingUrl||current.url)&&mode!=="page"){await report("Embedded pages have no hostname. Use the Add page shortcut.");return;}
    const result=await addCurrentTab(current.id,mode);
    await report(result.closed?"Added and closed successfully.":result.kept?"Added to the list. Your close-on-add setting keeps this tab open.":"Rule added, but the browser could not close the tab.");
   }catch{await report("Shortcut received, but the tab could not be added. It may have closed or become unavailable.");}

@@ -6,7 +6,7 @@ const event=n=>({addListener:f=>{const prior=listeners[n];listeners[n]=prior?(..
 const area=(kind)=>({get:async d=>({...d,...(kind==='local'?local:session)}),set:async v=>{const target=kind==='local'?local:session;Object.assign(target,v);const changes=Object.fromEntries(Object.keys(v).map(k=>[k,{newValue:v[k]}]));listeners.storage?.(changes,kind);}});
 let popupCalls=0,popupFails=false;
 const chrome={commands:{onCommand:event('command')},permissions:{contains:async()=>true},action:{setBadgeBackgroundColor:async()=>{},setBadgeText:async()=>{},openPopup:async()=>{popupCalls++;if(popupFails)throw Error('popup blocked');}},windows:{get:async()=>({focused:true}),getLastFocused:async()=>({focused:false})},storage:{local:area('local'),session:area('session'),onChanged:event('storage')},tabs:{onCreated:event('created'),onUpdated:event('updated'),onRemoved:event('removed'),get:async id=>{if(!tabs[id])throw Error('gone');return {...tabs[id]};},query:async()=>Object.values(tabs),remove:async id=>{if(removalFails)throw Error('cannot remove');delete tabs[id];removed.push(id);listeners.removed(id);}},runtime:{id:'test',onInstalled:event('installed'),onStartup:event('startup'),onMessage:event('message')},notifications:{create:async(id,v)=>{if(notifyFails)throw Error('disabled');notices.push(v);}}};
-const context=vm.createContext({chrome,console,URL,setTimeout:(fn)=>setTimeout(fn,0)});context.importScripts=(...names)=>names.forEach(n=>vm.runInContext(read(n),context));vm.runInContext(read('background.js'),context);
+const context=vm.createContext({chrome,console,URL,crypto:require("crypto").webcrypto,TextEncoder,setTimeout:(fn)=>setTimeout(fn,0)});context.importScripts=(...names)=>names.forEach(n=>vm.runInContext(read(n),context));vm.runInContext(read('background.js'),context);
 async function settle(){for(let i=0;i<8;i++)await vm.runInContext('queue',context);}
 const target='https://www.chromeactions.com/scan-update-and-protect-your-browser.html?secret=1#fragment';
 const add=(id,url=target)=>tabs[id]={id,url};
@@ -88,6 +88,17 @@ const message=(id,mode='page')=>new Promise(resolve=>listeners.message({type:'ad
  add(805,'https://partial.example/page');listeners.command('add-page',{id:805});await settle();assert(!tabs[805]);
  listeners.command('unknown',tabs[803]);await settle();assert.equal(local.rules.length,4);
  assert.equal(manifest.commands['add-page'].suggested_key.default,'Alt+Shift+B');
+ local={rules:[],enabled:true,closeOnAdd:false,notify:false,celebrate:false};session={};tabs={};
+ chrome.tabs.query=queryBefore;
+ const embedded='data:text/html;charset=utf-8,%3Ch1%3Eprivate-content%3C/h1%3E';
+ add(900,embedded);listeners.command('add-page',tabs[900]);await settle();assert(tabs[900]);assert.equal(local.rules[0].mode,'embedded');assert.equal(local.rules[0].fingerprint.length,64);
+ assert(!JSON.stringify({local,session}).includes('private-content'));
+ add(901,embedded+'#section');listeners.created(tabs[901]);await settle();assert(!tabs[901]);assert.equal(local.totalClosed,1);assert.equal(local.recentClosed[0].url,'Embedded page');
+ add(902,embedded+'different');listeners.created(tabs[902]);await settle();assert(tabs[902]);
+ listeners.command('add-host',tabs[902]);await settle();assert.equal(local.rules.length,1);assert(session.lastShortcut.message.includes('no hostname'));
+ local.closeOnAdd=true;listeners.command('add-page',tabs[900]);await settle();assert(!tabs[900]);assert.equal(local.rules.length,1);assert.equal(local.totalClosed,2);
+ add(903,embedded+'different');listeners.command('add-page',tabs[903]);await settle();assert.equal(local.rules.length,2);assert(!tabs[903]);
+ console.log('PASS: embedded fingerprints, exact matching, fragments, private content omission, keep-open, duplicate rules and hostname rejection.');
  console.log('PASS: shortcut page/host rules, duplicate rules, keep-open preference, explicit close while paused, protected pages and active-tab fallback.');
  console.log('PASS: transient visibility retry, bounded attempts, protected-page failure reason, URL-free diagnostics.');
  console.log('PASS: optional host/scripting declarations and native fallback before approval.');
