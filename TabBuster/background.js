@@ -79,20 +79,7 @@ chrome.runtime.onMessage.addListener((message,sender,respond)=>{
   return true;
  }
  if(message?.type!=="addCurrent")return;
- schedule(async()=>{
-  const tab=await chrome.tabs.get(message.tabId);
-  const rule=makeRule(tab.pendingUrl||tab.url,message.mode);
-  const settings=await chrome.storage.local.get({...DEFAULT_SETTINGS,closeOnAdd:true});
-  const {keptTabs={}}=await chrome.storage.session.get({keptTabs:{}});
-  const closeNow=typeof message.closeCurrent==="boolean"?message.closeCurrent:settings.closeOnAdd;
-  if(!closeNow) keptTabs[tab.id]=tab.pendingUrl||tab.url;
-  else delete keptTabs[tab.id];
-  await chrome.storage.session.set({keptTabs});
-  if(!settings.rules.some(r=>r.mode===rule.mode&&r.host===rule.host&&r.path===rule.path))
-   await chrome.storage.local.set({rules:[...settings.rules,rule]});
-  const closed=closeNow?Boolean(await closeIfUnwanted(tab,true)):false;
-  return {ok:true,closed,paused:!settings.enabled,kept:!closeNow};
- }).then(respond,error=>respond({ok:false,error:error.message}));
+ schedule(()=>addCurrentTab(message.tabId,message.mode,message.closeCurrent)).then(respond,error=>respond({ok:false,error:error.message}));
  return true;
 });
 
@@ -105,3 +92,29 @@ chrome.storage.onChanged.addListener((changes,area)=>{
  if(area==="local" && (changes.celebrate||changes.pendingMilestone)) void updateMilestoneBadge();
 });
 void updateMilestoneBadge();
+async function addCurrentTab(tabId,mode,closeCurrent) {
+  const tab=await chrome.tabs.get(tabId);
+  const rule=makeRule(tab.pendingUrl||tab.url,mode);
+  const settings=await chrome.storage.local.get({...DEFAULT_SETTINGS,closeOnAdd:true});
+  const {keptTabs={}}=await chrome.storage.session.get({keptTabs:{}});
+  const closeNow=typeof closeCurrent==="boolean"?closeCurrent:settings.closeOnAdd;
+  if(!closeNow) keptTabs[tab.id]=tab.pendingUrl||tab.url;
+  else delete keptTabs[tab.id];
+  await chrome.storage.session.set({keptTabs});
+  if(!settings.rules.some(r=>r.mode===rule.mode&&r.host===rule.host&&r.path===rule.path))
+   await chrome.storage.local.set({rules:[...settings.rules,rule]});
+  const closed=closeNow?Boolean(await closeIfUnwanted(tab,true)):false;
+  return {ok:true,closed,paused:!settings.enabled,kept:!closeNow};
+
+}
+
+chrome.commands.onCommand.addListener((command,tab)=>{
+ const mode=command==="add-page"?"page":command==="add-host"?"host":null;
+ if(!mode)return;
+ // Capture the active tab before waiting for queued closures.
+ const selected=tab?Promise.resolve(tab):chrome.tabs.query({active:true,currentWindow:true}).then(tabs=>tabs[0]);
+ void selected.then(current=>{
+  if(!current || !/^https?:\/\//i.test(current.pendingUrl||current.url||""))return;
+  return schedule(()=>addCurrentTab(current.id,mode));
+ }).catch(()=>console.debug("TabBuster: shortcut could not add this tab."));
+});

@@ -5,7 +5,7 @@ let local={},session={},tabs={},notices=[],removed=[],listeners={},notifyFails=f
 const event=n=>({addListener:f=>{const prior=listeners[n];listeners[n]=prior?(...args)=>{prior(...args);return f(...args);}:f;}});
 const area=(kind)=>({get:async d=>({...d,...(kind==='local'?local:session)}),set:async v=>{const target=kind==='local'?local:session;Object.assign(target,v);const changes=Object.fromEntries(Object.keys(v).map(k=>[k,{newValue:v[k]}]));listeners.storage?.(changes,kind);}});
 let popupCalls=0,popupFails=false;
-const chrome={permissions:{contains:async()=>true},action:{setBadgeBackgroundColor:async()=>{},setBadgeText:async()=>{},openPopup:async()=>{popupCalls++;if(popupFails)throw Error('popup blocked');}},windows:{get:async()=>({focused:true}),getLastFocused:async()=>({focused:false})},storage:{local:area('local'),session:area('session'),onChanged:event('storage')},tabs:{onCreated:event('created'),onUpdated:event('updated'),onRemoved:event('removed'),get:async id=>{if(!tabs[id])throw Error('gone');return {...tabs[id]};},query:async()=>Object.values(tabs),remove:async id=>{if(removalFails)throw Error('cannot remove');delete tabs[id];removed.push(id);listeners.removed(id);}},runtime:{id:'test',onInstalled:event('installed'),onStartup:event('startup'),onMessage:event('message')},notifications:{create:async(id,v)=>{if(notifyFails)throw Error('disabled');notices.push(v);}}};
+const chrome={commands:{onCommand:event('command')},permissions:{contains:async()=>true},action:{setBadgeBackgroundColor:async()=>{},setBadgeText:async()=>{},openPopup:async()=>{popupCalls++;if(popupFails)throw Error('popup blocked');}},windows:{get:async()=>({focused:true}),getLastFocused:async()=>({focused:false})},storage:{local:area('local'),session:area('session'),onChanged:event('storage')},tabs:{onCreated:event('created'),onUpdated:event('updated'),onRemoved:event('removed'),get:async id=>{if(!tabs[id])throw Error('gone');return {...tabs[id]};},query:async()=>Object.values(tabs),remove:async id=>{if(removalFails)throw Error('cannot remove');delete tabs[id];removed.push(id);listeners.removed(id);}},runtime:{id:'test',onInstalled:event('installed'),onStartup:event('startup'),onMessage:event('message')},notifications:{create:async(id,v)=>{if(notifyFails)throw Error('disabled');notices.push(v);}}};
 const context=vm.createContext({chrome,console,URL,setTimeout:(fn)=>setTimeout(fn,0)});context.importScripts=(...names)=>names.forEach(n=>vm.runInContext(read(n),context));vm.runInContext(read('background.js'),context);
 async function settle(){for(let i=0;i<8;i++)await vm.runInContext('queue',context);}
 const target='https://www.chromeactions.com/scan-update-and-protect-your-browser.html?secret=1#fragment';
@@ -76,6 +76,17 @@ const message=(id,mode='page')=>new Promise(resolve=>listeners.message({type:'ad
  retryCalls=0;chrome.scripting.executeScript=async()=>{retryCalls++;throw Error('Cannot access contents of url https://private.example/secret');};
  await context.notifyClosure({},new URL('https://blocked.example/'));
  assert.equal(retryCalls,1);assert(session.lastNoticeResult.message.includes('denied'));assert(!JSON.stringify(session.lastNoticeResult).includes('private.example'));
+ local={rules:[],enabled:false,closeOnAdd:false,notify:false,celebrate:false};session={};tabs={};
+ add(801,'https://shortcut.example/one?tracking=1');listeners.command('add-page',tabs[801]);await settle();
+ assert(tabs[801]);assert.equal(local.rules.length,1);assert.equal(local.rules[0].mode,'page');
+ listeners.command('add-page',tabs[801]);await settle();assert.equal(local.rules.length,1);
+ local.closeOnAdd=true;listeners.command('add-page',tabs[801]);await settle();assert(!tabs[801]);assert.equal(local.totalClosed,1);
+ add(802,'https://host-shortcut.example/two');listeners.command('add-host',tabs[802]);await settle();assert(local.rules.some(r=>r.mode==='host'&&r.host==='host-shortcut.example'));assert.equal(local.totalClosed,2);
+ add(803,'chrome://settings/');listeners.command('add-page',tabs[803]);await settle();assert(tabs[803]);assert.equal(local.rules.length,2);
+ add(804,'https://fallback.example/page');chrome.tabs.query=async()=>[tabs[804]];listeners.command('add-page');await settle();assert(!tabs[804]);assert.equal(local.totalClosed,3);
+ listeners.command('unknown',tabs[803]);await settle();assert.equal(local.rules.length,3);
+ assert.equal(manifest.commands['add-page'].suggested_key.default,'Alt+Shift+B');
+ console.log('PASS: shortcut page/host rules, duplicate rules, keep-open preference, explicit close while paused, protected pages and active-tab fallback.');
  console.log('PASS: transient visibility retry, bounded attempts, protected-page failure reason, URL-free diagnostics.');
  console.log('PASS: optional host/scripting declarations and native fallback before approval.');
  console.log('PASS: webpage toast destination, no duplicate native notice, private redaction, protected-page/injection/unfocused fallbacks.');

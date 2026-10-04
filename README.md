@@ -12,6 +12,8 @@ One particularly useful video site enhancements extension, with a completely nag
 
 ## Quick & Easy
 
+- **Alt+Shift+B** (Option+Shift+B on Mac) adds the active page using your current close-on-add preference. Change it or assign a whole-hostname shortcut in **Extensions → Keyboard shortcuts**. If the default is unavailable, choose another combination there.
+
 - On the offending page, click the **TabBuster** icon, & **Add this tab/site** will add the current page for future actioning. Enabling **Close current tab** will add & close the tab.
 - Set it to affect only that specific page, or the entire hostname
 - **Pause automatic closing** anytime if you ever need to access the offending page.

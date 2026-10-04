@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TabBuster",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "Closes pages and hostnames on your personal list.",
   "permissions": [
     "tabs",
@@ -25,5 +25,16 @@
   "optional_host_permissions": [
     "http://*/*",
     "https://*/*"
-  ]
+  ],
+  "commands": {
+    "add-page": {
+      "suggested_key": {
+        "default": "Alt+Shift+B"
+      },
+      "description": "Add the current page to your closing list"
+    },
+    "add-host": {
+      "description": "Add the current hostname to your closing list"
+    }
+  }
 }
