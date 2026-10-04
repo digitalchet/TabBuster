@@ -111,10 +111,19 @@ async function addCurrentTab(tabId,mode,closeCurrent) {
 chrome.commands.onCommand.addListener((command,tab)=>{
  const mode=command==="add-page"?"page":command==="add-host"?"host":null;
  if(!mode)return;
- // Capture the active tab before waiting for queued closures.
- const selected=tab?Promise.resolve(tab):chrome.tabs.query({active:true,currentWindow:true}).then(tabs=>tabs[0]);
- void selected.then(current=>{
-  if(!current || !/^https?:\/\//i.test(current.pendingUrl||current.url||""))return;
-  return schedule(()=>addCurrentTab(current.id,mode));
- }).catch(()=>console.debug("TabBuster: shortcut could not add this tab."));
+ const selected=Number.isInteger(tab?.id)&&tab.id>=0?Promise.resolve(tab):chrome.tabs.query({active:true,lastFocusedWindow:true}).then(tabs=>tabs[0]);
+ void schedule(async()=>{
+  const report=message=>chrome.storage.session.set({lastShortcut:{at:Date.now(),message}});
+  await report("Shortcut received. Checking the active tab…");
+  try {
+   const candidate=await selected;
+   if(!candidate){await report("Shortcut received, but no active tab was available.");return;}
+   const current=await chrome.tabs.get(candidate.id);
+   if(!/^https?:\/\//i.test(current.pendingUrl||current.url||"")){
+    await report("Shortcut received, but this page is not an HTTP or HTTPS website.");return;
+   }
+   const result=await addCurrentTab(current.id,mode);
+   await report(result.closed?"Added and closed successfully.":result.kept?"Added to the list. Your close-on-add setting keeps this tab open.":"Rule added, but the browser could not close the tab.");
+  }catch{await report("Shortcut received, but the tab could not be added. It may have closed or become unavailable.");}
+ }).catch(()=>console.debug("TabBuster: shortcut status unavailable."));
 });

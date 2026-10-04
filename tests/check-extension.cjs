@@ -82,9 +82,11 @@ const message=(id,mode='page')=>new Promise(resolve=>listeners.message({type:'ad
  listeners.command('add-page',tabs[801]);await settle();assert.equal(local.rules.length,1);
  local.closeOnAdd=true;listeners.command('add-page',tabs[801]);await settle();assert(!tabs[801]);assert.equal(local.totalClosed,1);
  add(802,'https://host-shortcut.example/two');listeners.command('add-host',tabs[802]);await settle();assert(local.rules.some(r=>r.mode==='host'&&r.host==='host-shortcut.example'));assert.equal(local.totalClosed,2);
- add(803,'chrome://settings/');listeners.command('add-page',tabs[803]);await settle();assert(tabs[803]);assert.equal(local.rules.length,2);
+ add(803,'chrome://settings/');listeners.command('add-page',tabs[803]);await settle();assert(tabs[803]);assert.equal(local.rules.length,2);assert(session.lastShortcut.message.includes('not an HTTP'));
  add(804,'https://fallback.example/page');chrome.tabs.query=async()=>[tabs[804]];listeners.command('add-page');await settle();assert(!tabs[804]);assert.equal(local.totalClosed,3);
- listeners.command('unknown',tabs[803]);await settle();assert.equal(local.rules.length,3);
+ assert(session.lastShortcut.message.includes('closed successfully'));assert(!JSON.stringify(session.lastShortcut).includes('fallback.example'));
+ add(805,'https://partial.example/page');listeners.command('add-page',{id:805});await settle();assert(!tabs[805]);
+ listeners.command('unknown',tabs[803]);await settle();assert.equal(local.rules.length,4);
  assert.equal(manifest.commands['add-page'].suggested_key.default,'Alt+Shift+B');
  console.log('PASS: shortcut page/host rules, duplicate rules, keep-open preference, explicit close while paused, protected pages and active-tab fallback.');
  console.log('PASS: transient visibility retry, bounded attempts, protected-page failure reason, URL-free diagnostics.');
