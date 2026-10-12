@@ -83,20 +83,25 @@
   style.textContent=`
    dialog{box-sizing:border-box;position:fixed;inset:0;margin:auto;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;padding:0;background:transparent;color:#f4f8ff;font:14px system-ui;outline:none;overflow:hidden}
    dialog::backdrop{background:rgb(8 15 27 / 60%)}
-   .viewport{position:absolute;inset:64px 24px 110px;overflow:auto;display:grid;place-items:safe center}
+   .viewport{position:absolute;inset:0;overflow:auto;display:grid;place-items:safe center}
    .image-toggle{display:block;flex:none;border:0;padding:0;background:transparent;max-width:100%;max-height:100%;cursor:zoom-in}
-   img{display:block;max-width:100%;max-height:calc(100dvh - 174px);width:auto;height:auto;object-fit:contain}
+   img{display:block;max-width:100%;max-height:100dvh;width:auto;height:auto;object-fit:contain}
    .image-toggle[aria-pressed="true"]{max-width:none;max-height:none;cursor:zoom-out}
    .image-toggle[aria-pressed="true"] img{max-width:none;max-height:none}
    .close{position:absolute;right:20px;top:16px;border:1px solid #38536f;border-radius:50%;width:36px;height:36px;padding:0;display:grid;place-items:center;background:#0f1e31;color:#f4f8ff;cursor:pointer;z-index:1}
    .close::before,.close::after{content:"";position:absolute;width:16px;height:2px;background:currentColor;border-radius:1px;transform:rotate(45deg)}.close::after{transform:rotate(-45deg)}
    button:focus-visible,a:focus-visible{outline:2px solid #69b7ff;outline-offset:3px}
    aside{position:absolute;bottom:18px;right:18px;max-width:min(350px,calc(100% - 60px));padding:12px 16px;background:#0f1e31;border:1px solid #38536f;border-radius:10px;line-height:1.5}a{color:#69b7ff}
+   .notice-toggle{position:absolute;bottom:18px;right:18px;width:32px;height:32px;border:1px solid #38536f;border-radius:50%;padding:0;background:#0f1e31;color:#f4f8ff;font:bold 18px system-ui;cursor:pointer;z-index:2;display:grid;place-items:center}
+   aside{padding-right:48px;z-index:1}aside[hidden]{display:none}
   `;
   const dialog=document.createElement('dialog');dialog.setAttribute('aria-label','TabBuster Instagram image preview');
   const close=document.createElement('button');close.type='button';close.className='close';close.setAttribute('aria-label','Close image preview');
   const notice=document.createElement('aside');notice.append('Image preview only. ');
   const login=document.createElement('a');login.href='https://www.instagram.com/accounts/login/';login.textContent='Log in to Instagram';login.target='_blank';login.rel='noopener noreferrer';notice.append(login,' for the full post and its features.');
+  notice.id='preview-information';
+  const info=document.createElement('button');info.type='button';info.className='notice-toggle';info.textContent='−';info.setAttribute('aria-controls',notice.id);info.setAttribute('aria-expanded','true');info.setAttribute('aria-label','Collapse image information');info.title='Collapse image information';
+  info.onclick=()=>{notice.hidden=!notice.hidden;info.textContent=notice.hidden?'i':'−';info.setAttribute('aria-expanded',String(!notice.hidden));info.setAttribute('aria-label',notice.hidden?'Show image information':'Collapse image information');info.title=info.getAttribute('aria-label');};
   const viewport=document.createElement('div');viewport.className='viewport';
   const zoom=document.createElement('button');zoom.type='button';zoom.className='image-toggle';zoom.setAttribute('aria-pressed','false');zoom.setAttribute('aria-label','Show image at natural size');zoom.title='Click to view natural size';
   zoom.append(image);viewport.append(zoom);
@@ -117,7 +122,7 @@
   }
   zoom.onclick=()=>{expanded=!expanded;sizeImage();viewport.scrollTo(0,0);};
   const resize=new ResizeObserver(sizeImage);resize.observe(viewport);
-  dialog.append(close,viewport,notice);shadow.append(style,dialog);document.body.append(host);
+  dialog.append(close,viewport,notice,info);shadow.append(style,dialog);document.body.append(host);
   function dismiss(){if(!host.isConnected)return;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
   close.onclick=dismiss;dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===viewport)dismiss();});

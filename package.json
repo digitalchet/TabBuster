@@ -1,6 +1,6 @@
 {
   "name": "tabbuster",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "private": true,
   "description": "Close unwanted browser tabs on your terms.",
   "scripts": {
