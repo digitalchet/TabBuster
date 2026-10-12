@@ -100,16 +100,28 @@
   const viewport=document.createElement('div');viewport.className='viewport';
   const zoom=document.createElement('button');zoom.type='button';zoom.className='image-toggle';zoom.setAttribute('aria-pressed','false');zoom.setAttribute('aria-label','Show image at natural size');zoom.title='Click to view natural size';
   zoom.append(image);viewport.append(zoom);
-  zoom.onclick=()=>{
-   const expanded=zoom.getAttribute('aria-pressed')!=='true';
-   zoom.setAttribute('aria-pressed',String(expanded));zoom.setAttribute('aria-label',expanded?'Fit image to window':'Show image at natural size');zoom.title=expanded?'Click to fit image to window':'Click to view natural size';
-   viewport.scrollTo(0,0);
-  };
+  let expanded=false;
+  const sizeNote=document.createElement('span');sizeNote.style.display='block';notice.prepend(sizeNote);
+  function sizeImage(){
+   const naturalWidth=image.naturalWidth,naturalHeight=image.naturalHeight;
+   const fit=Math.min(1,viewport.clientWidth/naturalWidth,viewport.clientHeight/naturalHeight);
+   const zoomScale=fit<0.98?1:2;
+   const scale=expanded?zoomScale:fit;
+   image.style.width=(naturalWidth*scale)+'px';image.style.height=(naturalHeight*scale)+'px';
+   image.style.maxWidth='none';image.style.maxHeight='none';
+   zoom.style.width=image.style.width;zoom.style.height=image.style.height;zoom.style.maxWidth='none';zoom.style.maxHeight='none';
+   zoom.setAttribute('aria-pressed',String(expanded));
+   const action=expanded?'Fit image to window':zoomScale===1?'Show image at natural size':'Enlarge image to 2×';
+   zoom.setAttribute('aria-label',action);zoom.title=action;
+   sizeNote.textContent=naturalWidth+' × '+naturalHeight+' px · '+(expanded?(zoomScale===1?'Natural size':'2× enlargement — no extra detail'):(fit<0.98?'Fit to window':'Natural size'));
+  }
+  zoom.onclick=()=>{expanded=!expanded;sizeImage();viewport.scrollTo(0,0);};
+  const resize=new ResizeObserver(sizeImage);resize.observe(viewport);
   dialog.append(close,viewport,notice);shadow.append(style,dialog);document.body.append(host);
-  function dismiss(){if(!host.isConnected)return;dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
+  function dismiss(){if(!host.isConnected)return;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
   close.onclick=dismiss;dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===viewport)dismiss();});
-  try{dialog.showModal();}catch{host.remove();return;}
+  try{dialog.showModal();sizeImage();}catch{resize.disconnect();host.remove();return;}
   viewer=dismiss;root.remove();close.focus();
   void chrome.runtime.sendMessage({type:'instagramNagDismissed'}).catch(()=>{});
  }
