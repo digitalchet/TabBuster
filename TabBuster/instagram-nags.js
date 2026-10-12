@@ -5,11 +5,16 @@
  let observer,active=false,pending=false,previews=false,clicked=null,viewer=null,loading=false;
  const dismissedLanding=new WeakSet();
  const signature="|click||input||keydown||keyup||change|";
- function findOverlay(dialog,post=false){
+ function findOverlay(dialog,post=false,profile=false){
   const text=e=>(e.textContent||"").trim();
-  if(!post&&!dialog.querySelector('[role="img"][aria-label="Illustration of see this story upsell"]'))return;
+  if(!post&&!profile&&!dialog.querySelector('[role="img"][aria-label="Illustration of see this story upsell"]'))return;
   if(post&&(!dialog.querySelector('svg[aria-label="Close"]')||!dialog.querySelector('img[alt$="profile picture"]')))return;
-  if(![...dialog.querySelectorAll('span')].some(e=>text(e)===(post?"See this post":"Continue watching")))return;
+  if(profile){
+   const spans=[...dialog.querySelectorAll('span')].map(text);
+   const heading=spans.map(t=>t.match(/^See photos, videos and more from ([A-Za-z0-9_.]+)$/)).find(Boolean);
+   if(!heading||!spans.includes('Sign up and never miss a post from '+heading[1]+'.')||!dialog.querySelector('svg[aria-label="Close"]'))return;
+   if(![...dialog.querySelectorAll('img')].some(img=>img.alt===heading[1]+"'s profile picture"))return;
+  }else if(![...dialog.querySelectorAll('span')].some(e=>text(e)===(post?"See this post":"Continue watching")))return;
   const buttons=[...dialog.querySelectorAll('[role="button"],button')].map(text);
   if(!buttons.includes("Sign up")||!buttons.includes("Log in")||dialog.querySelector('input,textarea,form,video'))return;
   const wrapper=dialog.closest('[data-interactable]');
@@ -36,7 +41,7 @@
   pending=false;if(!active)return;
   for(const dialog of document.querySelectorAll('[role="dialog"][aria-modal="true"]')){
    if(dismissLanding(dialog))continue;
-   const root=findOverlay(dialog);
+   const root=findOverlay(dialog)||findOverlay(dialog,false,true);
    if(!root){
     const postRoot=previews&&findOverlay(dialog,true);
     if(postRoot&&clicked&&Date.now()-clicked.at<8000&&!loading&&!viewer)void preview(postRoot,clicked);
