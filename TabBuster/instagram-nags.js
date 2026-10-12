@@ -91,22 +91,53 @@
    .close{position:absolute;right:20px;top:16px;border:1px solid #38536f;border-radius:50%;width:36px;height:36px;padding:0;display:grid;place-items:center;background:#0f1e31;color:#f4f8ff;cursor:pointer;z-index:1}
    .close::before,.close::after{content:"";position:absolute;width:16px;height:2px;background:currentColor;border-radius:1px;transform:rotate(45deg)}.close::after{transform:rotate(-45deg)}
    button:focus-visible,a:focus-visible{outline:2px solid #69b7ff;outline-offset:3px}
-   aside{position:absolute;bottom:18px;right:18px;max-width:min(350px,calc(100% - 60px));padding:12px 16px;background:#0f1e31;border:1px solid #38536f;border-radius:10px;line-height:1.5}a{color:#69b7ff}
-   .notice-toggle{position:absolute;bottom:18px;right:18px;width:32px;height:32px;border:1px solid #38536f;border-radius:50%;padding:0;background:#0f1e31;color:#f4f8ff;font:bold 18px system-ui;cursor:pointer;z-index:2;display:grid;place-items:center}
-   aside{padding-right:48px;z-index:1}aside[hidden]{display:none}
+   aside{position:absolute;bottom:18px;right:18px;width:min(416px,calc(100% - 36px));box-sizing:border-box;padding:0;background:#0f1e31;border:1px solid #38536f;border-radius:10px;line-height:1.5;z-index:1;overflow:hidden}a{color:#69b7ff}
+   .notice-content{box-sizing:border-box;padding:12px 48px 12px 16px}
+   .notice-toggle{position:absolute;bottom:0;right:0;width:30px;height:30px;border:0;padding:0;background:transparent;color:#f4f8ff;font:18px system-ui;cursor:pointer;z-index:2;display:grid;place-items:center}
+   .notice-toggle:focus-visible{outline-offset:-4px;border-radius:50%}
   `;
   const dialog=document.createElement('dialog');dialog.setAttribute('aria-label','TabBuster Instagram image preview');
   const close=document.createElement('button');close.type='button';close.className='close';close.setAttribute('aria-label','Close image preview');
-  const notice=document.createElement('aside');notice.append('Image preview only. ');
-  const login=document.createElement('a');login.href='https://www.instagram.com/accounts/login/';login.textContent='Log in to Instagram';login.target='_blank';login.rel='noopener noreferrer';notice.append(login,' for the full post and its features.');
+  const notice=document.createElement('aside'),noticeContent=document.createElement('div');noticeContent.className='notice-content';notice.append(noticeContent);noticeContent.append('Image preview only. ');
+  const login=document.createElement('a');login.href='https://www.instagram.com/accounts/login/';login.textContent='Log in to Instagram';login.target='_blank';login.rel='noopener noreferrer';noticeContent.append(login,' for the full post and its features.');
   notice.id='preview-information';
   const info=document.createElement('button');info.type='button';info.className='notice-toggle';info.textContent='−';info.setAttribute('aria-controls',notice.id);info.setAttribute('aria-expanded','true');info.setAttribute('aria-label','Collapse image information');info.title='Collapse image information';
-  info.onclick=()=>{notice.hidden=!notice.hidden;info.textContent=notice.hidden?'i':'−';info.setAttribute('aria-expanded',String(!notice.hidden));info.setAttribute('aria-label',notice.hidden?'Show image information':'Collapse image information');info.title=info.getAttribute('aria-label');};
+  let noticeCollapsed=false,noticeAnimating=false;
+  async function animateNotice(element,frames,duration){
+   await element.animate(frames,{duration,easing:'ease-in-out',fill:'forwards'}).finished;
+  }
+  info.onclick=async()=>{
+   if(noticeAnimating)return;noticeAnimating=true;
+   const expanding=noticeCollapsed;
+   const expandedWidth=Math.min(416,dialog.clientWidth-36);
+   noticeContent.style.width=(expandedWidth-2)+'px';
+   const expandedHeight=noticeContent.offsetHeight+2;
+   const from=notice.getBoundingClientRect();
+   info.textContent='';
+   try{
+    if(!expanding){
+     noticeContent.inert=true;
+     await animateNotice(noticeContent,[{opacity:1},{opacity:0}],140);
+     noticeContent.style.visibility='hidden';
+    }
+    await animateNotice(notice,[{width:from.width+'px',height:from.height+'px',borderRadius:expanding?'50%':'10px'},{width:(expanding?expandedWidth:32)+'px',height:(expanding?expandedHeight:32)+'px',borderRadius:expanding?'10px':'50%'}],260);
+    noticeCollapsed=!expanding;
+    if(expanding){
+     noticeContent.style.visibility='visible';
+     await animateNotice(noticeContent,[{opacity:0},{opacity:1}],140);
+     noticeContent.inert=false;
+     notice.getAnimations().forEach(a=>a.cancel());noticeContent.style.width='';
+    }
+   }finally{
+    info.textContent=noticeCollapsed?'i':'−';info.setAttribute('aria-expanded',String(!noticeCollapsed));info.setAttribute('aria-label',noticeCollapsed?'Show image information':'Collapse image information');info.title=info.getAttribute('aria-label');noticeAnimating=false;
+   }
+  };
+  notice.append(info);
   const viewport=document.createElement('div');viewport.className='viewport';
   const zoom=document.createElement('button');zoom.type='button';zoom.className='image-toggle';zoom.setAttribute('aria-pressed','false');zoom.setAttribute('aria-label','Show image at natural size');zoom.title='Click to view natural size';
   zoom.append(image);viewport.append(zoom);
   let expanded=false;
-  const sizeNote=document.createElement('span');sizeNote.style.display='block';notice.prepend(sizeNote);
+  const sizeNote=document.createElement('span');sizeNote.style.display='block';noticeContent.prepend(sizeNote);
   function sizeImage(){
    const naturalWidth=image.naturalWidth,naturalHeight=image.naturalHeight;
    const fit=Math.min(1,viewport.clientWidth/naturalWidth,viewport.clientHeight/naturalHeight);
@@ -122,7 +153,7 @@
   }
   zoom.onclick=()=>{expanded=!expanded;sizeImage();viewport.scrollTo(0,0);};
   const resize=new ResizeObserver(sizeImage);resize.observe(viewport);
-  dialog.append(close,viewport,notice,info);shadow.append(style,dialog);document.body.append(host);
+  dialog.append(close,viewport,notice);shadow.append(style,dialog);document.body.append(host);
   function dismiss(){if(!host.isConnected)return;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
   close.onclick=dismiss;dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===viewport)dismiss();});
