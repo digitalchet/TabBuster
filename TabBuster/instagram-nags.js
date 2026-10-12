@@ -3,6 +3,7 @@
  if(globalThis.__tabBusterInstagram)return;
  globalThis.__tabBusterInstagram=true;
  let observer,active=false,pending=false,previews=false,clicked=null,viewer=null,loading=false;
+ const dismissedLanding=new WeakSet();
  const signature="|click||input||keydown||keyup||change|";
  function findOverlay(dialog,post=false){
   const text=e=>(e.textContent||"").trim();
@@ -20,9 +21,21 @@
   if(root.querySelectorAll('[role="dialog"]').length!==1||root.querySelector('main,article,nav,form,input,textarea,video'))return;
   return root;
  }
+ function dismissLanding(dialog){
+  if(dismissedLanding.has(dialog)||!/^\/(?:[^/]+\/)?p\/[^/]+\/$/.test(location.pathname))return false;
+  const text=dialog.textContent||'';
+  if(!text.includes('Never miss a post from ')||!text.includes('Sign up for Instagram to stay in the loop.')||dialog.querySelector('form,input,textarea'))return false;
+  if(!dialog.querySelector('a[href="/accounts/emailsignup/"]')||!dialog.querySelector('a[href="/accounts/login/?source=desktop_dynamic_landing_dialog"]'))return false;
+  const close=dialog.querySelector('svg[aria-label="Close"]')?.closest('[role="button"],button');
+  if(!close)return false;
+  dismissedLanding.add(dialog);close.click();
+  setTimeout(()=>{if(!dialog.isConnected)void chrome.runtime.sendMessage({type:'instagramNagDismissed'}).catch(()=>{});},250);
+  return true;
+ }
  function scan(){
   pending=false;if(!active)return;
   for(const dialog of document.querySelectorAll('[role="dialog"][aria-modal="true"]')){
+   if(dismissLanding(dialog))continue;
    const root=findOverlay(dialog);
    if(!root){
     const postRoot=previews&&findOverlay(dialog,true);
@@ -63,8 +76,41 @@
    const match=part.trim().match(/^(\S+)\s+(\d+(?:\.\d+)?)(w|x)$/);
    if(match&&Number(match[2])>bestSize&&safeImage(match[1])){best=safeImage(match[1]);bestSize=Number(match[2]);}
   }
-  clicked={src,best,alt:img.alt,at:Date.now(),link};
+  clicked={src,best,alt:img.alt,at:Date.now(),link,postUrl:url.href};
  },true);
+
+ async function fetchGallery(postUrl,signal){
+  const url=new URL(postUrl),code=url.pathname.match(/\/p\/([^/]+)/)?.[1];
+  if(url.origin!==location.origin||!code)return [];
+  const response=await fetch(url.href,{credentials:'include',signal,redirect:'error'});
+  if(!response.ok)throw Error('Post unavailable');
+  const html=await response.text();if(html.length>12000000)throw Error('Post too large');
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const stack=[];
+  for(const script of doc.querySelectorAll('script[type="application/json"],script[type="application/ld+json"]')){
+   try{stack.push(JSON.parse(script.textContent));}catch{}
+  }
+  let visited=0;
+  while(stack.length&&visited++<100000){
+   const node=stack.pop();if(!node||typeof node!=='object')continue;
+   if(node.shortcode===code||node.code===code){
+    const children=node.edge_sidecar_to_children?.edges?.map(e=>e.node)||node.carousel_media;
+    if(Array.isArray(children)&&children.length<=30){
+     const slides=[];
+     for(const child of children){
+      if(child.is_video||child.media_type===2)continue;
+      const candidates=child.image_versions2?.candidates||child.display_resources||[];
+      const sorted=[...candidates].sort((a,b)=>(b.width||b.config_width||0)-(a.width||a.config_width||0));
+      const src=sorted.map(c=>safeImage(c.url||c.src)).find(Boolean)||safeImage(child.display_url);
+      if(src&&!slides.some(s=>s.src===src))slides.push({src,alt:child.accessibility_caption||'Instagram post image'});
+     }
+     if(slides.length)return slides;
+    }
+   }
+   for(const value of Object.values(node))if(value&&typeof value==='object')stack.push(value);
+  }
+  return [];
+ }
  async function preview(root,item){
   loading=true;
   const image=new Image();image.alt=item.alt||'Instagram image preview';image.referrerPolicy='no-referrer';
@@ -94,12 +140,17 @@
    aside{position:absolute;bottom:18px;right:18px;width:min(416px,calc(100% - 36px));box-sizing:border-box;padding:0;background:#0f1e31;border:1px solid #38536f;border-radius:10px;line-height:1.5;z-index:1;overflow:hidden}a{color:#69b7ff}
    .notice-content{box-sizing:border-box;padding:12px 48px 12px 16px}
    .notice-toggle{position:absolute;bottom:0;right:0;width:30px;height:30px;border:0;padding:0;background:transparent;color:#f4f8ff;font:18px system-ui;cursor:pointer;z-index:2;display:grid;place-items:center}
+   .gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);border:1px solid #38536f;border-radius:50%;width:40px;height:40px;background:#0f1e31;color:#f4f8ff;font:26px system-ui;cursor:pointer;z-index:2}.gallery-arrow.prev{left:16px}.gallery-arrow.next{right:16px}.gallery-arrow:disabled{opacity:.4;cursor:default}
+   .gallery-dots{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:6px;max-width:55%;overflow:auto;padding:8px;border-radius:18px;background:#0f1e31;z-index:2}.gallery-dots button{flex:none;width:12px;height:12px;border:1px solid #69b7ff;border-radius:50%;padding:0;background:transparent;cursor:pointer}.gallery-dots button[aria-current="true"]{background:#69b7ff}
+   [hidden]{display:none!important}
    .notice-toggle:focus-visible{outline-offset:-4px;border-radius:50%}
   `;
   const dialog=document.createElement('dialog');dialog.setAttribute('aria-label','TabBuster Instagram image preview');
   const close=document.createElement('button');close.type='button';close.className='close';close.setAttribute('aria-label','Close image preview');
   const notice=document.createElement('aside'),noticeContent=document.createElement('div');noticeContent.className='notice-content';notice.append(noticeContent);noticeContent.append('Image preview only. ');
   const login=document.createElement('a');login.href='https://www.instagram.com/accounts/login/';login.textContent='Log in to Instagram';login.target='_blank';login.rel='noopener noreferrer';noticeContent.append(login,' for the full post and its features.');
+  const postLink=document.createElement('a');postLink.href=item.postUrl;postLink.textContent='Open post on Instagram';postLink.target='_blank';postLink.rel='noopener noreferrer';postLink.style.display='block';noticeContent.append(postLink);
+  const galleryStatus=document.createElement('span');galleryStatus.style.display='block';galleryStatus.setAttribute('role','status');galleryStatus.textContent='Checking for more post images…';noticeContent.append(galleryStatus);
   notice.id='preview-information';
   const info=document.createElement('button');info.type='button';info.className='notice-toggle';info.textContent='−';info.setAttribute('aria-controls',notice.id);info.setAttribute('aria-expanded','true');info.setAttribute('aria-label','Collapse image information');info.title='Collapse image information';
   let noticeCollapsed=false,noticeAnimating=false;
@@ -153,12 +204,37 @@
   }
   zoom.onclick=()=>{expanded=!expanded;sizeImage();viewport.scrollTo(0,0);};
   const resize=new ResizeObserver(sizeImage);resize.observe(viewport);
-  dialog.append(close,viewport,notice);shadow.append(style,dialog);document.body.append(host);
-  function dismiss(){if(!host.isConnected)return;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
+  const previous=document.createElement('button'),next=document.createElement('button'),dots=document.createElement('div');
+  previous.type=next.type='button';previous.className='gallery-arrow prev';next.className='gallery-arrow next';previous.textContent='‹';next.textContent='›';previous.setAttribute('aria-label','Previous image');next.setAttribute('aria-label','Next image');dots.className='gallery-dots';dots.setAttribute('aria-label','Post images');
+  let slides=[{src:image.src,alt:image.alt}],slideIndex=0,slideRequest=0;
+  const galleryAbort=new AbortController();const galleryTimeout=setTimeout(()=>galleryAbort.abort(),12000);
+  function updateGallery(){
+   previous.hidden=next.hidden=dots.hidden=slides.length<2;previous.disabled=slideIndex===0;next.disabled=slideIndex===slides.length-1;
+   dots.replaceChildren();slides.forEach((_,i)=>{const dot=document.createElement('button');dot.type='button';dot.setAttribute('aria-label','Show image '+(i+1));dot.setAttribute('aria-current',String(i===slideIndex));dot.onclick=()=>void showSlide(i);dots.append(dot);});
+  }
+  async function showSlide(index){
+   if(index<0||index>=slides.length)return;
+   const request=++slideRequest,candidate=new Image();candidate.referrerPolicy='no-referrer';
+   const ok=await new Promise(resolve=>{const timer=setTimeout(()=>resolve(false),8000);candidate.onload=()=>{clearTimeout(timer);resolve(true);};candidate.onerror=()=>{clearTimeout(timer);resolve(false);};candidate.src=slides[index].src;});
+   if(request!==slideRequest||!host.isConnected)return;
+   if(!ok){galleryStatus.textContent='Image unavailable. Open the post to try there.';return;}
+   image.src=candidate.src;image.alt=slides[index].alt;await image.decode().catch(()=>{});if(request!==slideRequest||!host.isConnected)return;
+   slideIndex=index;expanded=false;sizeImage();viewport.scrollTo(0,0);updateGallery();galleryStatus.textContent='Image '+(index+1)+' of '+slides.length+' available images';
+  }
+  previous.onclick=()=>void showSlide(slideIndex-1);next.onclick=()=>void showSlide(slideIndex+1);
+  dialog.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();void showSlide(slideIndex+(event.key==='ArrowLeft'?-1:1));}});
+  updateGallery();
+  dialog.append(close,viewport,notice,previous,next,dots);shadow.append(style,dialog);document.body.append(host);
+  function dismiss(){if(!host.isConnected)return;galleryAbort.abort();clearTimeout(galleryTimeout);slideRequest++;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
   close.onclick=dismiss;dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===viewport)dismiss();});
   try{dialog.showModal();sizeImage();}catch{resize.disconnect();host.remove();return;}
   viewer=dismiss;root.remove();close.focus();
+  void fetchGallery(item.postUrl,galleryAbort.signal).then(found=>{
+   if(!host.isConnected)return;
+   if(found.length){slides=found;slideIndex=0;updateGallery();void showSlide(0);}
+   else galleryStatus.textContent='No additional image data supplied. Open the post for its carousel.';
+  }).catch(()=>{if(host.isConnected)galleryStatus.textContent='Could not load post images. Your preview is still available.';}).finally(()=>clearTimeout(galleryTimeout));
   void chrome.runtime.sendMessage({type:'instagramNagDismissed'}).catch(()=>{});
  }
  chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&(changes.instagramNags||changes.instagramPreviews||changes.enabled))void refresh();});

@@ -44,7 +44,7 @@ TabBuster only ever closes tabs you add, it never affects other tabs, & offers n
 
 Page rules ignore query strings and fragments. Subdomains, including `www`, need separate entries. The **? Help** button in Settings explains the details.
 
-Rules, preferences, counts and recent closure history stay on your device. No analytics, remote code or background network requests. Removing the extension clears its saved data.
+Rules, preferences, counts and recent closure history stay on your device. No analytics or remote code. Optional image previews request the selected post and its images from Instagram. Removing the extension clears its saved data.
 
 [A Digital☆Impulse Creation.](https://digital-impulse.com/) · [Buy me a coffee](https://ko-fi.com/digitalchet)
 
@@ -53,3 +53,5 @@ Embedded popups without an address bar can be added with the Add page shortcut. 
 **Website nags (experimental):** optionally dismiss Instagram’s recognized English “Continue watching” overlay. Enable it in Settings and approve Instagram access. Dialog inspection stays local; only a separate dismissal count is saved. Pause stops it too. Changed layouts are left alone, and content requiring login remains unavailable.
 
 Optional Instagram image previews replace a recognized post login prompt with the image supplied by the clicked tile. No original-resolution guarantee, extra carousel slides or video access; image loading uses Instagram’s CDN.
+
+Image previews lazily request the clicked Instagram post using the current session. When it supplies ordered carousel data, arrows, dots and arrow keys navigate the available images. Otherwise the initial preview remains, with an Open post link. The recognized English post-page signup prompt is also dismissed.
