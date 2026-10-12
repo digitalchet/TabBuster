@@ -81,20 +81,34 @@
   const host=document.createElement('div');host.id='tabbuster-image-preview';
   const shadow=host.attachShadow({mode:'closed'}),style=document.createElement('style');
   style.textContent=`
-   dialog{box-sizing:border-box;position:fixed;inset:0;margin:auto;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;padding:48px 24px 100px;background:#080f1bf5;color:#f4f8ff;font:14px system-ui;outline:none}
-   dialog::backdrop{background:#080f1b}img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;margin:auto}
-   button{position:absolute;right:20px;top:16px;border:1px solid #38536f;border-radius:50%;width:36px;height:36px;background:#0f1e31;color:#f4f8ff;font:26px system-ui;cursor:pointer}
+   dialog{box-sizing:border-box;position:fixed;inset:0;margin:auto;width:100vw;height:100dvh;max-width:none;max-height:none;border:0;padding:0;background:transparent;color:#f4f8ff;font:14px system-ui;outline:none;overflow:hidden}
+   dialog::backdrop{background:rgb(8 15 27 / 60%)}
+   .viewport{position:absolute;inset:64px 24px 110px;overflow:auto;display:grid;place-items:safe center}
+   .image-toggle{display:block;flex:none;border:0;padding:0;background:transparent;max-width:100%;max-height:100%;cursor:zoom-in}
+   img{display:block;max-width:100%;max-height:calc(100dvh - 174px);width:auto;height:auto;object-fit:contain}
+   .image-toggle[aria-pressed="true"]{max-width:none;max-height:none;cursor:zoom-out}
+   .image-toggle[aria-pressed="true"] img{max-width:none;max-height:none}
+   .close{position:absolute;right:20px;top:16px;border:1px solid #38536f;border-radius:50%;width:36px;height:36px;padding:0;display:grid;place-items:center;background:#0f1e31;color:#f4f8ff;cursor:pointer;z-index:1}
+   .close::before,.close::after{content:"";position:absolute;width:16px;height:2px;background:currentColor;border-radius:1px;transform:rotate(45deg)}.close::after{transform:rotate(-45deg)}
    button:focus-visible,a:focus-visible{outline:2px solid #69b7ff;outline-offset:3px}
    aside{position:absolute;bottom:18px;right:18px;max-width:min(350px,calc(100% - 60px));padding:12px 16px;background:#0f1e31;border:1px solid #38536f;border-radius:10px;line-height:1.5}a{color:#69b7ff}
   `;
   const dialog=document.createElement('dialog');dialog.setAttribute('aria-label','TabBuster Instagram image preview');
-  const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Close image preview');
+  const close=document.createElement('button');close.type='button';close.className='close';close.setAttribute('aria-label','Close image preview');
   const notice=document.createElement('aside');notice.append('Image preview only. ');
   const login=document.createElement('a');login.href='https://www.instagram.com/accounts/login/';login.textContent='Log in to Instagram';login.target='_blank';login.rel='noopener noreferrer';notice.append(login,' for the full post and its features.');
-  dialog.append(close,image,notice);shadow.append(style,dialog);document.body.append(host);
+  const viewport=document.createElement('div');viewport.className='viewport';
+  const zoom=document.createElement('button');zoom.type='button';zoom.className='image-toggle';zoom.setAttribute('aria-pressed','false');zoom.setAttribute('aria-label','Show image at natural size');zoom.title='Click to view natural size';
+  zoom.append(image);viewport.append(zoom);
+  zoom.onclick=()=>{
+   const expanded=zoom.getAttribute('aria-pressed')!=='true';
+   zoom.setAttribute('aria-pressed',String(expanded));zoom.setAttribute('aria-label',expanded?'Fit image to window':'Show image at natural size');zoom.title=expanded?'Click to fit image to window':'Click to view natural size';
+   viewport.scrollTo(0,0);
+  };
+  dialog.append(close,viewport,notice);shadow.append(style,dialog);document.body.append(host);
   function dismiss(){if(!host.isConnected)return;dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
   close.onclick=dismiss;dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
-  dialog.addEventListener('click',event=>{if(event.target===dialog)dismiss();});
+  dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===viewport)dismiss();});
   try{dialog.showModal();}catch{host.remove();return;}
   viewer=dismiss;root.remove();close.focus();
   void chrome.runtime.sendMessage({type:'instagramNagDismissed'}).catch(()=>{});
