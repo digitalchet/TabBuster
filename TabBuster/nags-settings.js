@@ -4,8 +4,10 @@ const nagStatus=document.getElementById('nag-status');
 const nagAccess={permissions:['scripting'],origins:['https://www.instagram.com/*']};
 let nagBusy=false;
 async function refreshNags(){
- const [s,allowed]=await Promise.all([chrome.storage.local.get({instagramNags:false,nagsDismissed:0,enabled:true}),chrome.permissions.contains(nagAccess)]);
+ const [s,allowed]=await Promise.all([chrome.storage.local.get({instagramNags:false,instagramPreviews:false,nagsDismissed:0,enabled:true}),chrome.permissions.contains(nagAccess)]);
  nagToggle.checked=s.instagramNags&&allowed;
+ document.getElementById('instagram-previews').checked=s.instagramPreviews;
+ document.getElementById('instagram-previews').disabled=!nagToggle.checked;
  document.getElementById('nag-count').textContent=s.nagsDismissed.toLocaleString();
  nagStatus.textContent=nagToggle.checked?(s.enabled?'Enabled for the recognized English Instagram prompt.':'Paused with automatic tab closing.'):'Off. Enable to approve Instagram access.';
 }
@@ -21,3 +23,7 @@ nagToggle.addEventListener('click',()=>{
 chrome.storage.onChanged.addListener(()=>{if(!nagBusy)void refreshNags();});
 chrome.permissions.onRemoved.addListener(()=>void refreshNags());
 void refreshNags();
+
+document.getElementById('instagram-previews').onchange=async event=>{
+ try{await chrome.storage.local.set({instagramPreviews:event.target.checked});}catch{await refreshNags();}
+};

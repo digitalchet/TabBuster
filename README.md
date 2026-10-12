@@ -51,3 +51,5 @@ Rules, preferences, counts and recent closure history stay on your device. No an
 Embedded popups without an address bar can be added with the Add page shortcut. TabBuster saves a local SHA-256 fingerprint of the data address, not its contents. Only exact matches close; changed content or encoding needs adding again.
 
 **Website nags (experimental):** optionally dismiss Instagram’s recognized English “Continue watching” overlay. Enable it in Settings and approve Instagram access. Dialog inspection stays local; only a separate dismissal count is saved. Pause stops it too. Changed layouts are left alone, and content requiring login remains unavailable.
+
+Optional Instagram image previews replace a recognized post login prompt with the image supplied by the clicked tile. No original-resolution guarantee, extra carousel slides or video access; image loading uses Instagram’s CDN.
