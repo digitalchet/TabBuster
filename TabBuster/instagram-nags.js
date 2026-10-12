@@ -206,7 +206,8 @@
   const resize=new ResizeObserver(sizeImage);resize.observe(viewport);
   const previous=document.createElement('button'),next=document.createElement('button'),dots=document.createElement('div');
   previous.type=next.type='button';previous.className='gallery-arrow prev';next.className='gallery-arrow next';previous.textContent='‹';next.textContent='›';previous.setAttribute('aria-label','Previous image');next.setAttribute('aria-label','Next image');dots.className='gallery-dots';dots.setAttribute('aria-label','Post images');
-  let slides=[{src:image.src,alt:image.alt}],slideIndex=0,slideRequest=0;
+  let slides=[{src:image.src,alt:image.alt}],slideIndex=0,slideRequest=0,galleryOutcome="";
+  let carouselPort=null;
   const galleryAbort=new AbortController();const galleryTimeout=setTimeout(()=>galleryAbort.abort(),12000);
   function updateGallery(){
    previous.hidden=next.hidden=dots.hidden=slides.length<2;previous.disabled=slideIndex===0;next.disabled=slideIndex===slides.length-1;
@@ -219,22 +220,35 @@
    if(request!==slideRequest||!host.isConnected)return;
    if(!ok){galleryStatus.textContent='Image unavailable. Open the post to try there.';return;}
    image.src=candidate.src;image.alt=slides[index].alt;await image.decode().catch(()=>{});if(request!==slideRequest||!host.isConnected)return;
-   slideIndex=index;expanded=false;sizeImage();viewport.scrollTo(0,0);updateGallery();galleryStatus.textContent='Image '+(index+1)+' of '+slides.length+' available images';
+   slideIndex=index;expanded=false;sizeImage();viewport.scrollTo(0,0);updateGallery();galleryStatus.textContent='Image '+(index+1)+' of '+slides.length+' available images'+(galleryOutcome?' · '+galleryOutcome:'');
   }
   previous.onclick=()=>void showSlide(slideIndex-1);next.onclick=()=>void showSlide(slideIndex+1);
   dialog.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();void showSlide(slideIndex+(event.key==='ArrowLeft'?-1:1));}});
   updateGallery();
   dialog.append(close,viewport,notice,previous,next,dots);shadow.append(style,dialog);document.body.append(host);
-  function dismiss(){if(!host.isConnected)return;galleryAbort.abort();clearTimeout(galleryTimeout);slideRequest++;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
+  function dismiss(){if(!host.isConnected)return;carouselPort?.disconnect();galleryAbort.abort();clearTimeout(galleryTimeout);slideRequest++;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
   close.onclick=dismiss;dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===viewport)dismiss();});
   try{dialog.showModal();sizeImage();}catch{resize.disconnect();host.remove();return;}
   viewer=dismiss;root.remove();close.focus();
+  function backgroundGallery(){
+   if(!host.isConnected)return;
+   galleryStatus.textContent='Loading carousel in a temporary background tab…';
+   carouselPort=chrome.runtime.connect({name:'instagram-carousel'});
+   let answered=false;
+   carouselPort.onMessage.addListener(result=>{
+    answered=true;if(!host.isConnected)return;
+    if(result.ok&&result.slides?.length){galleryOutcome=result.reason?.startsWith('Reached the end')?'':result.reason||'';slides=result.slides;slideIndex=0;updateGallery();void showSlide(0);}
+    else galleryStatus.textContent=result.reason||'No additional images available. Open the post to view it.';
+   });
+   carouselPort.onDisconnect.addListener(()=>{if(!answered&&host.isConnected)galleryStatus.textContent='Background collection ended. Your preview is still available.';});
+   carouselPort.postMessage({url:item.postUrl});
+  }
   void fetchGallery(item.postUrl,galleryAbort.signal).then(found=>{
    if(!host.isConnected)return;
-   if(found.length){slides=found;slideIndex=0;updateGallery();void showSlide(0);}
-   else galleryStatus.textContent='No additional image data supplied. Open the post for its carousel.';
-  }).catch(()=>{if(host.isConnected)galleryStatus.textContent='Could not load post images. Your preview is still available.';}).finally(()=>clearTimeout(galleryTimeout));
+   if(found.length>1){slides=found;slideIndex=0;updateGallery();void showSlide(0);}
+   else backgroundGallery();
+  }).catch(()=>{if(host.isConnected)backgroundGallery();}).finally(()=>clearTimeout(galleryTimeout));
   void chrome.runtime.sendMessage({type:'instagramNagDismissed'}).catch(()=>{});
  }
  chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&(changes.instagramNags||changes.instagramPreviews||changes.enabled))void refresh();});

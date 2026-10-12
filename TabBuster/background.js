@@ -130,3 +130,5 @@ chrome.commands.onCommand.addListener((command,tab)=>{
 });
 
 importScripts("nags-background.js");
+
+importScripts("carousel-background.js");

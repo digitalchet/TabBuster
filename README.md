@@ -55,3 +55,5 @@ Embedded popups without an address bar can be added with the Add page shortcut. 
 Optional Instagram image previews replace a recognized post login prompt with the image supplied by the clicked tile. No original-resolution guarantee, extra carousel slides or video access; image loading uses Instagram’s CDN.
 
 Image previews lazily request the clicked Instagram post using the current session. When it supplies ordered carousel data, arrows, dots and arrow keys navigate the available images. Otherwise the initial preview remains, with an Open post link. The recognized English post-page signup prompt is also dismissed.
+
+When the post response lacks carousel data, previews try a temporary inactive post tab, advancing its carousel for up to 20 steps. It closes automatically after collection or when the preview closes. This experimental fallback may return only some images.

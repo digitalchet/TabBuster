@@ -7,6 +7,7 @@
 !/tests/
 /tests/*
 !/tests/check-extension.cjs
+!/tests/check-carousel.cjs
 !/assets/
 /assets/*
 !/assets/screenshots/
