@@ -128,3 +128,5 @@ chrome.commands.onCommand.addListener((command,tab)=>{
   }catch{await report("Shortcut received, but the tab could not be added. It may have closed or become unavailable.");}
  }).catch(()=>console.debug("TabBuster: shortcut status unavailable."));
 });
+
+importScripts("nags-background.js");
