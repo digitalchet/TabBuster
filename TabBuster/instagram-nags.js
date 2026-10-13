@@ -147,6 +147,10 @@
    .notice-toggle{position:absolute;bottom:0;right:0;width:30px;height:30px;border:0;padding:0;background:transparent;color:#f4f8ff;font:18px system-ui;cursor:pointer;z-index:2;display:grid;place-items:center}
    .gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);border:1px solid #38536f;border-radius:50%;width:40px;height:40px;background:#0f1e31;color:#f4f8ff;font:26px system-ui;cursor:pointer;z-index:2}.gallery-arrow.prev{left:16px}.gallery-arrow.next{right:16px}.gallery-arrow:disabled{opacity:.4;cursor:default}
    .gallery-dots{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:6px;max-width:55%;overflow:auto;padding:8px;border-radius:18px;background:#0f1e31;z-index:2}.gallery-dots button{flex:none;width:12px;height:12px;border:1px solid #69b7ff;border-radius:50%;padding:0;background:transparent;cursor:pointer}.gallery-dots button[aria-current="true"]{background:#69b7ff}
+   .collection-status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:16px 20px;border:1px solid #38536f;border-radius:12px;background:#0f1e31;color:#f4f8ff;z-index:4;text-align:center;max-width:80%;box-sizing:border-box}
+   .collection-status::before{content:"";display:block;width:24px;height:24px;margin:0 auto 10px;border:3px solid #38536f;border-top-color:#69b7ff;border-radius:50%;animation:collection-spin .8s linear infinite}
+   @keyframes collection-spin{to{transform:rotate(360deg)}}
+   .collection-status button{display:block;margin:10px auto 0;padding:5px 12px;border:1px solid #38536f;border-radius:6px;background:transparent;color:#f4f8ff;cursor:pointer}
    [hidden]{display:none!important}
    .notice-toggle:focus-visible{outline-offset:-4px;border-radius:50%}
   `;
@@ -230,7 +234,9 @@
   previous.onclick=()=>void showSlide(slideIndex-1);next.onclick=()=>void showSlide(slideIndex+1);
   dialog.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();void showSlide(slideIndex+(event.key==='ArrowLeft'?-1:1));}});
   updateGallery();
-  dialog.append(close,viewport,notice,previous,next,dots);shadow.append(style,dialog);document.body.append(host);
+  const collectionStatus=document.createElement('div');collectionStatus.className='collection-status';collectionStatus.hidden=true;collectionStatus.setAttribute('role','status');collectionStatus.append('Collecting post images—please wait. Focus will return when finished.');
+  const cancelCollection=document.createElement('button');cancelCollection.type='button';cancelCollection.textContent='Cancel';cancelCollection.onclick=()=>{carouselPort?.disconnect();collectionStatus.hidden=true;galleryStatus.textContent='Collection cancelled. Your preview is still available.';};collectionStatus.append(cancelCollection);
+  dialog.append(close,viewport,notice,previous,next,dots,collectionStatus);shadow.append(style,dialog);document.body.append(host);
   function dismiss(){if(!host.isConnected)return;carouselPort?.disconnect();galleryAbort.abort();clearTimeout(galleryTimeout);slideRequest++;resize.disconnect();dialog.close();host.remove();viewer=null;if(item.link.isConnected)item.link.focus({preventScroll:true});}
   close.onclick=dismiss;dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===viewport)dismiss();});
@@ -238,17 +244,17 @@
   viewer=dismiss;root.remove();close.focus();
   function backgroundGallery(){
    if(!host.isConnected)return;
-   galleryStatus.textContent='Loading carousel in a temporary background tab…';
+   collectionStatus.hidden=false;galleryStatus.textContent='Collecting images in a focused offscreen window…';
    carouselPort=chrome.runtime.connect({name:'instagram-carousel'});
    let answered=false;
    carouselPort.onMessage.addListener(result=>{
     if(!host.isConnected)return;
     if(result.progress){const d=result.diagnostics;galleryStatus.textContent=d.phase+' · '+d.images+' images · tab '+d.visibility;return;}
-    answered=true;
+    answered=true;collectionStatus.hidden=true;
     if(result.ok&&result.slides?.length){galleryOutcome=result.reason?.startsWith('Reached the end')?'':result.reason||'';slides=result.slides;slideIndex=0;updateGallery();void showSlide(0);}
     else galleryStatus.textContent=result.reason||'No additional images available. Open the post to view it.';
    });
-   carouselPort.onDisconnect.addListener(()=>{if(!answered&&host.isConnected)galleryStatus.textContent='Background collection ended. Your preview is still available.';});
+   carouselPort.onDisconnect.addListener(()=>{collectionStatus.hidden=true;if(!answered&&host.isConnected)galleryStatus.textContent='Background collection ended. Your preview is still available.';});
    carouselPort.postMessage({url:item.postUrl});
   }
   void fetchGallery(item.postUrl,galleryAbort.signal).then(found=>{

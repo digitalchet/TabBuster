@@ -56,4 +56,4 @@ Optional Instagram image previews replace a recognized post login prompt with th
 
 Image previews lazily request the clicked Instagram post using the current session. When it supplies ordered carousel data, arrows, dots and arrow keys navigate the available images. Otherwise the initial preview remains, with an Open post link. The recognized English post-page signup prompt is also dismissed.
 
-When the post response lacks carousel data, previews try a temporary inactive post tab, advancing its carousel for up to 20 steps. It closes automatically after collection or when the preview closes. This experimental fallback may return only some images.
+When the post response lacks carousel data, previews try a temporary focused offscreen window, advancing its carousel for up to 20 steps. A spinner indicates collection; the window closes and focus returns afterward or when the preview closes. This experimental fallback may return only some images.

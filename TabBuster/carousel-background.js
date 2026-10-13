@@ -64,7 +64,7 @@ chrome.runtime.onConnect.addListener(port=>{
  if(port.name!=='instagram-carousel')return;
  const sender=port.sender;
  if(sender?.id!==chrome.runtime.id||sender.frameId!==0||!sender.tab||!sender.url?.startsWith('https://www.instagram.com/')){port.disconnect();return;}
- let tabId=null,stopped=false,started=false,lastDiagnostics={phase:'Opening temporary tab',images:0,clicks:0,advances:0};
+ let collectorWindowId=null,tabId=null,stopped=false,started=false,lastDiagnostics={phase:'Opening temporary tab',images:0,clicks:0,advances:0};
  const progress=(message,source)=>{
   if(stopped||source.id!==chrome.runtime.id||source.tab?.id!==tabId||source.frameId!==0||message?.type!=='carouselProgress')return;
   const d=message.diagnostics;
@@ -74,7 +74,14 @@ chrome.runtime.onConnect.addListener(port=>{
   try{port.postMessage({progress:true,diagnostics:lastDiagnostics});}catch{}
  };
  chrome.runtime.onMessage.addListener(progress);
- async function cleanup(){stopped=true;chrome.runtime.onMessage.removeListener(progress);if(tabId!==null){const id=tabId;tabId=null;try{await chrome.tabs.remove(id);}catch{}}}
+ async function cleanup(){
+  stopped=true;chrome.runtime.onMessage.removeListener(progress);
+  if(collectorWindowId!==null){
+   const id=collectorWindowId;collectorWindowId=null;tabId=null;
+   try{await chrome.windows.remove(id);}catch{}
+   try{await chrome.tabs.update(sender.tab.id,{active:true});await chrome.windows.update(sender.tab.windowId,{focused:true});}catch{}
+  }
+ }
  port.onDisconnect.addListener(()=>void cleanup());
  port.onMessage.addListener(async message=>{
   if(started)return;started=true;
@@ -91,9 +98,17 @@ chrome.runtime.onConnect.addListener(port=>{
    const settings=await chrome.storage.local.get({instagramNags:false,instagramPreviews:false,enabled:true});
    if(!settings.instagramNags||!settings.instagramPreviews||!settings.enabled||!await chrome.permissions.contains(instagramAccess))throw Error('Preview access is disabled.');
    if(stopped)return;
-   const tab=await chrome.tabs.create({url:url.href,active:false,windowId:sender.tab.windowId});tabId=tab.id;
+   const window=await chrome.windows.create({url:'about:blank',type:'popup',focused:false,left:-10000,top:100,width:1280,height:900,incognito:Boolean(sender.tab.incognito)});
+   collectorWindowId=window.id;tabId=window.tabs?.[0]?.id;
    if(stopped){await cleanup();return;}
-   // Wait for the target document, without selecting or focusing the temporary tab.
+   await chrome.windows.update(window.id,{left:-10000,top:100,width:1280,height:900});
+   const bounds=await chrome.windows.get(window.id);
+   if(bounds.left+bounds.width>0)throw Error('Browser did not keep the collection window offscreen.');
+   if(!Number.isInteger(tabId))throw Error('Collection tab unavailable.');
+   await chrome.tabs.update(tabId,{url:url.href,active:true});
+   await chrome.windows.update(window.id,{focused:true});
+   if(stopped){await cleanup();return;}
+   // Wait for the post in the focused offscreen window.
    for(let i=0;i<35&&!stopped;i++){
     const current=await chrome.tabs.get(tabId);
     if(current.status==='complete')break;
@@ -102,7 +117,7 @@ chrome.runtime.onConnect.addListener(port=>{
    if(stopped)return;
    const result=await chrome.scripting.executeScript({target:{tabId},func:collectPostCarousel,args:[url.href]});
    if(!stopped)port.postMessage({ok:true,...result[0]?.result});
-  }catch{if(!stopped){try{port.postMessage({ok:false,reason:'The temporary post tab could not supply its carousel.'});}catch{}}}
+  }catch{if(!stopped){try{port.postMessage({ok:false,reason:'The offscreen collection window could not supply its carousel.'});}catch{}}}
   finally{clearInterval(heartbeat);clearTimeout(timeout);await cleanup();try{port.disconnect();}catch{}}
  });
 });
