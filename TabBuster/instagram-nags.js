@@ -242,7 +242,9 @@
    carouselPort=chrome.runtime.connect({name:'instagram-carousel'});
    let answered=false;
    carouselPort.onMessage.addListener(result=>{
-    answered=true;if(!host.isConnected)return;
+    if(!host.isConnected)return;
+    if(result.progress){const d=result.diagnostics;galleryStatus.textContent=d.phase+' · '+d.images+' images · tab '+d.visibility;return;}
+    answered=true;
     if(result.ok&&result.slides?.length){galleryOutcome=result.reason?.startsWith('Reached the end')?'':result.reason||'';slides=result.slides;slideIndex=0;updateGallery();void showSlide(0);}
     else galleryStatus.textContent=result.reason||'No additional images available. Open the post to view it.';
    });

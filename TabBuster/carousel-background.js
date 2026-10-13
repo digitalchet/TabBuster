@@ -2,10 +2,22 @@
 // Executed only in the temporary tab for the exact requested post.
 async function collectPostCarousel(expectedUrl){
  const expected=new URL(expectedUrl);
- const deadline=Date.now()+20000,slides=new Map();let clicks=0,reason='No supported carousel appeared.';
+ const startedAt=Date.now(),deadline=startedAt+45000,slides=new Map();let clicks=0,reason='No supported carousel appeared.';
+ const diagnostics={visibility:document.visibilityState,focused:document.hasFocus(),clicks:0,advances:0,images:0,phase:'Waiting for carousel',elapsedMs:0};
+ function report(phase){Object.assign(diagnostics,{phase,visibility:document.visibilityState,focused:document.hasFocus(),clicks,images:slides.size,elapsedMs:Date.now()-startedAt});try{void chrome.runtime.sendMessage({type:'carouselProgress',diagnostics:{...diagnostics}}).catch(()=>{});}catch{}}
  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  const safe=src=>{try{const u=new URL(src);return u.protocol==='https:'&&(u.hostname.endsWith('.cdninstagram.com')||u.hostname.endsWith('.fbcdn.net'))?u:null;}catch{return null;}};
- let selected=null;
+ function waitForAdvance(element,before,signature){
+  return new Promise(resolve=>{
+   let done=false;
+   const finish=value=>{if(done)return;done=true;observer.disconnect();clearTimeout(timer);resolve(value);};
+   const observer=new MutationObserver(()=>{if(signature()!==before)finish(true);});
+   observer.observe(element,{subtree:true,childList:true,attributes:true,attributeFilter:['src','srcset','style']});
+   const timer=setTimeout(()=>finish(signature()!==before),Math.max(1,Math.min(12000,deadline-Date.now())));
+   if(signature()!==before)finish(true);
+  });
+ }
+ let selected=null;report('Waiting for carousel');
  while(Date.now()<deadline){
   if(location.origin!==expected.origin||location.pathname!==expected.pathname)return {slides:[],reason:'The post redirected to another page.'};
   // Dismiss only the verified post-page signup dialog via its own close action.
@@ -37,25 +49,41 @@ async function collectPostCarousel(expectedUrl){
   const next=selected.querySelector('button[aria-label="Go forward"],button[aria-label="Next"]');
   if(!next||next.disabled||next.getAttribute('aria-disabled')==='true'){reason='Reached the end of the available carousel.';break;}
   if(clicks>=20){reason='Stopped at the 20-step limit.';break;}
-  const before=lists[0].innerHTML;next.click();clicks++;
-  let changed=false;
-  for(let i=0;i<12&&Date.now()<deadline;i++){await sleep(150);if(lists[0].innerHTML!==before){changed=true;break;}}
-  if(!changed){reason='Instagram did not advance in the background tab.';break;}
+  const signature=()=>JSON.stringify([...selected.querySelectorAll('li,img,[style*="translate"]')].map(e=>[e.getAttribute('src'),e.getAttribute('srcset'),e.getAttribute('style')]));
+  const before=signature();next.click();clicks++;report('Waiting up to 12 seconds for Next');
+  const changed=await waitForAdvance(selected,before,signature);
+  if(changed){diagnostics.advances++;report('Carousel advanced');}
+  if(!changed){reason='No carousel advance detected within 12 seconds.';break;}
   await sleep(300);
  }
- if(Date.now()>=deadline)reason='Stopped at the 20-second collection limit.';
- return {slides:[...slides.values()].sort((a,b)=>a.position-b.position).map(({src,alt})=>({src,alt})),reason};
+ if(Date.now()>=deadline)reason='Stopped at the 45-second collection limit.';
+ report(reason);
+ return {diagnostics,slides:[...slides.values()].sort((a,b)=>a.position-b.position).map(({src,alt})=>({src,alt})),reason};
 }
 chrome.runtime.onConnect.addListener(port=>{
  if(port.name!=='instagram-carousel')return;
  const sender=port.sender;
  if(sender?.id!==chrome.runtime.id||sender.frameId!==0||!sender.tab||!sender.url?.startsWith('https://www.instagram.com/')){port.disconnect();return;}
- let tabId=null,stopped=false,started=false;
- async function cleanup(){stopped=true;if(tabId!==null){const id=tabId;tabId=null;try{await chrome.tabs.remove(id);}catch{}}}
+ let tabId=null,stopped=false,started=false,lastDiagnostics={phase:'Opening temporary tab',images:0,clicks:0,advances:0};
+ const progress=(message,source)=>{
+  if(stopped||source.id!==chrome.runtime.id||source.tab?.id!==tabId||source.frameId!==0||message?.type!=='carouselProgress')return;
+  const d=message.diagnostics;
+  if(!d||typeof d.phase!=='string')return;
+  lastDiagnostics={phase:d.phase.slice(0,100),visibility:d.visibility==='visible'?'visible':'hidden',focused:d.focused===true,images:Number(d.images)||0,clicks:Number(d.clicks)||0,advances:Number(d.advances)||0,elapsedMs:Number(d.elapsedMs)||0};
+  void chrome.storage.session.set({lastCarousel:{...lastDiagnostics,at:Date.now()}}).catch(()=>{});
+  try{port.postMessage({progress:true,diagnostics:lastDiagnostics});}catch{}
+ };
+ chrome.runtime.onMessage.addListener(progress);
+ async function cleanup(){stopped=true;chrome.runtime.onMessage.removeListener(progress);if(tabId!==null){const id=tabId;tabId=null;try{await chrome.tabs.remove(id);}catch{}}}
  port.onDisconnect.addListener(()=>void cleanup());
  port.onMessage.addListener(async message=>{
   if(started)return;started=true;
-  const timeout=setTimeout(()=>void cleanup(),28000);
+  const timeout=setTimeout(()=>{
+   try{port.postMessage({ok:false,reason:'Stopped at the 55-second overall limit.',diagnostics:lastDiagnostics});}catch{}
+   void chrome.storage.session.set({lastCarousel:{...lastDiagnostics,phase:'Stopped at the 55-second overall limit.',at:Date.now()}}).catch(()=>{});
+   void cleanup();
+  },55000);
+  const heartbeat=setInterval(()=>{if(tabId!==null&&!stopped)void chrome.tabs.get(tabId).catch(()=>{});},10000);
   try{
    const url=new URL(message.url);
    if(url.origin!=='https://www.instagram.com'||!/^\/(?:[^/]+\/)?p\/[A-Za-z0-9_-]+\/$/.test(url.pathname))throw Error('Unsupported post link.');
@@ -75,6 +103,6 @@ chrome.runtime.onConnect.addListener(port=>{
    const result=await chrome.scripting.executeScript({target:{tabId},func:collectPostCarousel,args:[url.href]});
    if(!stopped)port.postMessage({ok:true,...result[0]?.result});
   }catch{if(!stopped){try{port.postMessage({ok:false,reason:'The temporary post tab could not supply its carousel.'});}catch{}}}
-  finally{clearTimeout(timeout);await cleanup();try{port.disconnect();}catch{}}
+  finally{clearInterval(heartbeat);clearTimeout(timeout);await cleanup();try{port.disconnect();}catch{}}
  });
 });

@@ -27,3 +27,10 @@ void refreshNags();
 document.getElementById('instagram-previews').onchange=async event=>{
  try{await chrome.storage.local.set({instagramPreviews:event.target.checked});}catch{await refreshNags();}
 };
+
+async function refreshCarouselDiagnostic(){
+ const {lastCarousel:d}=await chrome.storage.session.get('lastCarousel');
+ document.getElementById('carousel-diagnostic').textContent=d?'Last collection ('+new Date(d.at).toLocaleTimeString()+'): '+d.phase+' · '+(d.visibility||'unknown visibility')+' · '+d.clicks+' Next clicks · '+d.advances+' advances · '+d.images+' images.':'No background collection recorded this session.';
+}
+chrome.storage.onChanged.addListener((changes,area)=>{if(area==='session'&&changes.lastCarousel)void refreshCarouselDiagnostic();});
+void refreshCarouselDiagnostic();
