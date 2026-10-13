@@ -91,6 +91,7 @@ chrome.runtime.onConnect.addListener(port=>{
    void cleanup();
   },55000);
   const heartbeat=setInterval(()=>{if(tabId!==null&&!stopped)void chrome.tabs.get(tabId).catch(()=>{});},10000);
+  let stage='Checking collection access';
   try{
    const url=new URL(message.url);
    if(url.origin!=='https://www.instagram.com'||!/^\/(?:[^/]+\/)?p\/[A-Za-z0-9_-]+\/$/.test(url.pathname))throw Error('Unsupported post link.');
@@ -98,13 +99,16 @@ chrome.runtime.onConnect.addListener(port=>{
    const settings=await chrome.storage.local.get({instagramNags:false,instagramPreviews:false,enabled:true});
    if(!settings.instagramNags||!settings.instagramPreviews||!settings.enabled||!await chrome.permissions.contains(instagramAccess))throw Error('Preview access is disabled.');
    if(stopped)return;
+   stage='Creating the offscreen window';
    const window=await chrome.windows.create({url:'about:blank',type:'popup',focused:false,left:-10000,top:100,width:1280,height:900,incognito:Boolean(sender.tab.incognito)});
    collectorWindowId=window.id;tabId=window.tabs?.[0]?.id;
    if(stopped){await cleanup();return;}
+   stage='Positioning the offscreen window';
    await chrome.windows.update(window.id,{left:-10000,top:100,width:1280,height:900});
    const bounds=await chrome.windows.get(window.id);
    if(bounds.left+bounds.width>0)throw Error('Browser did not keep the collection window offscreen.');
    if(!Number.isInteger(tabId))throw Error('Collection tab unavailable.');
+   stage='Opening the post';
    await chrome.tabs.update(tabId,{url:url.href,active:true});
    await chrome.windows.update(window.id,{focused:true});
    if(stopped){await cleanup();return;}
@@ -115,9 +119,15 @@ chrome.runtime.onConnect.addListener(port=>{
     await new Promise(resolve=>setTimeout(resolve,150));
    }
    if(stopped)return;
+   stage='Collecting carousel images';
    const result=await chrome.scripting.executeScript({target:{tabId},func:collectPostCarousel,args:[url.href]});
    if(!stopped)port.postMessage({ok:true,...result[0]?.result});
-  }catch{if(!stopped){try{port.postMessage({ok:false,reason:'The offscreen collection window could not supply its carousel.'});}catch{}}}
+  }catch(error){if(!stopped){
+   const detail=String(error?.message||'Unknown browser error').replace(/https?:\/\/[^\s]+/g,'[address]').slice(0,220);
+   const reason=/bounds|offscreen|visible screen/i.test(detail)?'The browser requires extension windows to remain at least 50% onscreen; fully offscreen collection is unavailable.':stage+': '+detail;
+   try{await chrome.storage.session.set({lastCarousel:{...lastDiagnostics,phase:reason,at:Date.now()}});}catch{}
+   try{port.postMessage({ok:false,reason});}catch{}
+  }}
   finally{clearInterval(heartbeat);clearTimeout(timeout);await cleanup();try{port.disconnect();}catch{}}
  });
 });

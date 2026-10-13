@@ -9,5 +9,6 @@ const source=fs.readFileSync((process.env.TABBUSTER_APP||process.cwd()+'/TabBust
  removed=[];chrome.scripting.executeScript=async()=>{throw Error('failed');};connect(port());await handler({url:'https://www.instagram.com/example/p/ABC/'});assert.deepEqual(removed,[77]);assert.equal(responses.at(-1).ok,false);
  removed=[];chrome.scripting.executeScript=()=>new Promise(resolve=>resolveScript=resolve);connect(port());const running=handler({url:'https://www.instagram.com/example/p/ABC/'});while(!resolveScript)await new Promise(r=>setTimeout(r,5));disconnect();resolveScript([]);await running;assert.deepEqual(removed,[77]);
  removed=[];chrome.windows.get=async()=>({left:100,width:1280});connect(port());await handler({url:'https://www.instagram.com/example/p/ABC/'});assert.deepEqual(removed,[77]);assert.equal(responses.at(-1).ok,false);
+ removed=[];chrome.windows.create=async()=>{throw Error('Invalid value for bounds. Bounds must be at least 50% within visible screen space.');};connect(port());await handler({url:'https://www.instagram.com/example/p/ABC/'});assert(responses.at(-1).reason.includes('50% onscreen'));assert.deepEqual(removed,[]);
  console.log('PASS: offscreen focused window and source focus restoration and cleanup on success, failure and disconnect.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
